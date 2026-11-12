@@ -1,0 +1,40 @@
+# Credentials (never commit): Data lake profiles (credentials/<name>.env with keys) + Google key files (*.json)
+credentials/
+# Any stray .env file (safety net)
+.env
+.env.*
+
+# CSS Electronics MF4 tools: Downloaded by install.bat / install.sh (install_tools.py), never committed
+.claude/skills/*/bin/*
+!.claude/skills/*/bin/LICENSE.txt
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Working data (raw-data caches, decoded Parquet, reports) - created at the repo root
+data/
+projects/
+
+# Developer tests
+tests/
+
+# Ad-hoc input folder for user-supplied logs / DBCs
+TEMP/
+
+# Internal notes on future skills
+TEMP_FUTURE_IDEAS/
+
+# Migration / SD upload manifests (bucket, device IDs, file lists) written outside data/
+migrate-*
+sd-upload-*
+
+# Browser automation artifacts (screenshots, snapshots)
+.playwright-mcp/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/

@@ -1,0 +1,9 @@
+Proprietary software - not covered by the MIT License
+
+The CSS Electronics MF4 decoder (mdf2parquet_decode / mdf2parquet_decode.exe) is proprietary software, Copyright (c) CSS Electronics. All rights reserved.
+
+It is not part of this repository: install.bat / install.sh download it from csselectronics.com
+into this folder (.claude/skills/canedge-workspace/scripts/install_tools.py). It is not licensed under the
+MIT License of this repository. You may not modify, decompile, disassemble or reverse engineer it.
+
+The latest version is available for free from https://www.csselectronics.com.

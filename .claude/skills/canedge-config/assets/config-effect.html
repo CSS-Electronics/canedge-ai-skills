@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__TITLE__</title>
+<link rel="icon" type="image/x-icon" href="__FAVICON__">
+<style>__FONTS__</style>
+<style>__REPORT_CSS__</style>
+<style>__UPLOT_CSS__</style>
+<style>__DASH_CSS__</style>
+<style>__DIFF_CSS__</style>
+<style>
+/* Config impact page on the dashboard kit: before = blue, after = green, removed by prescalers = orange, by filters = red, by the control signal = grey */
+:root{--before:#3d85c6;--after:#10cba9;--pre:#ff9900;--drop:#ff6666;--ctl:#6b717b}
+.hero .big{font-family:'JetBrains Mono',Consolas,monospace;font-weight:400;letter-spacing:-.3px}.ttitle{margin-top:30px}
+.cfgs{font-family:'JetBrains Mono',Consolas,monospace;font-size:12.5px;color:#434343}
+.hero{display:grid;grid-template-columns:260px 1fr;gap:22px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin:18px 0 12px}
+.hero .big{font-size:52px;line-height:1;color:var(--after)}.hero .bl{font-size:13px;color:var(--muted);margin-top:6px}
+.cmp{display:grid;grid-template-columns:130px 1fr 120px;gap:8px 12px;align-items:center}
+.cmp .lb{font-size:13px;color:#434343;text-align:right}.cmp .val{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.track{display:flex;height:26px;border-radius:3px;overflow:hidden;background:#eef1f4}.track span{height:100%}
+.track span+span{border-left:1px solid #fff}
+.hatch{background:repeating-linear-gradient(135deg,var(--after) 0 6px,#bdeee4 6px 12px)}.hatch.off{opacity:.35}
+.hero .bl2{font-size:12.5px;color:var(--muted);margin-top:8px;white-space:nowrap}.hero .bl2 b{color:#434343}
+.badge.tp{background:#eef1f4;color:#6b717b;font-size:10.5px;line-height:16px;padding:0 6px;margin-left:6px;vertical-align:1px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px;color:var(--muted);margin:10px 0 0 132px}.legend.ctl{margin:2px 0 8px 60px}.legend i{box-sizing:border-box}.legend span{white-space:nowrap}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.kgroups{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.kgroup .krow{display:block;padding:7px 0}.kgroup .krow .l{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kgroup .krow .v{display:block;font-size:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.krow .v .a{color:var(--after)}.ar{color:var(--muted);font-weight:400;margin:0 6px}
+.chs{display:grid;grid-template-columns:70px 1fr 110px;gap:4px 12px;align-items:center;font-size:13px;max-width:760px}
+.chs .lb{font-weight:600;color:#434343}.chs .bars{display:flex;flex-direction:column;gap:3px}
+.chs .b{height:11px;border-radius:2px}.chs .val{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;line-height:14px}
+.ok,.no{font-weight:700;font-size:14px;line-height:1}.no{color:var(--drop)}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+.gone{opacity:.28}
+.f-accepted{background:rgba(16,203,169,.15);color:#0b8f77}.f-prescaled{background:rgba(255,153,0,.15);color:#b36b00}.f-rejected{background:rgba(255,102,102,.15);color:#c43c3c}
+.tl .cap{font-family:'JetBrains Mono',Consolas,monospace;font-size:13px;color:#434343;font-weight:400;letter-spacing:-.3px;margin:14px 0 2px}.tl .uplot{font-family:inherit}.tl .u-legend{font-size:12px}
+.notes{font-size:11.5px;color:#9aa1ab;margin:28px 0 0;padding-left:18px}
+@media (max-width:720px){.hero{grid-template-columns:1fr}.cmp{grid-template-columns:70px 1fr 90px}.legend{margin-left:0}}
+hr.sep+div>.ttitle,hr.sep+.cap{margin-top:24px}
+/* Explore tab: Pick an ID, set a rule, one plot per signal (as recorded = blue, logged = green) */
+.exnote{font-size:12.5px;color:var(--muted);margin:2px 0 10px}.exnote:empty{display:none}
+.exrow{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-end;margin:12px 0 0}
+.exf{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}.exmsg{flex:1 1 100%}
+.exrow select,.exrow input{font:inherit;font-size:13px;color:#434343;padding:5px 8px;border:1px solid #cbcbcb;border-radius:4px;background:#fff}
+.exrow select:focus,.exrow input:focus{outline:none;border-color:var(--before)}
+.exrow input[type=number]{width:110px}
+.combo{position:relative;width:min(820px,100%)}.combo input{width:100%;box-sizing:border-box;font-family:'JetBrains Mono',Consolas,monospace;font-size:12.5px}
+.combo-list{display:none;position:absolute;z-index:20;left:0;right:0;top:100%;margin-top:2px;max-height:380px;overflow:auto;background:#fff;border:1px solid #cbcbcb;border-radius:4px;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.combo.open .combo-list{display:block}
+.exopt{display:grid;grid-template-columns:10px 46px 44px 92px minmax(0,1fr) 118px;gap:0 10px;padding:4px 10px;font-size:12.5px;color:#434343;cursor:pointer;white-space:nowrap}
+.exopt>span{overflow:hidden;text-overflow:ellipsis}.exopt .mo{font-family:'JetBrains Mono',Consolas,monospace;font-size:12px}
+.exopt .ru,.exopt .fa{color:var(--muted)}.exopt.rej{color:#b3b8bf}.exopt.rej .fa{color:#c43c3c;opacity:.6}.exopt.pre .ru{color:#b36b00}
+.exopt.act{background:#eef4fb}.exopt.sel{font-weight:700}.exempty{padding:8px 10px;font-size:12.5px;color:var(--muted)}
+.exmask{display:flex;gap:6px;flex-wrap:wrap}.exmask input{width:150px;font-family:'JetBrains Mono',Consolas,monospace}.exmask input.bad{border-color:#c43c3c;color:#c43c3c}
+.exmask select{max-width:280px}.exbyt{font-size:12.5px;color:var(--muted);margin:10px 0 0;line-height:1.6}.exbyt b{color:#434343}.exbyt .hot{color:#c43c3c}.exbyt .warn{color:#c43c3c}
+.exdots i.ring{width:8px!important;height:8px!important;border:1.5px solid var(--before);border-radius:50%!important;background:#fff;margin-right:3px!important}.exdots i.dot{width:7px!important;height:7px!important;border-radius:50%!important;background:var(--after)}
+.exctl{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:#434343;padding-bottom:6px;cursor:pointer}.exctl input{margin:0}
+.exbtn{font:inherit;font-size:12.5px;background:#fff;border:1px solid #cbcbcb;border-radius:4px;padding:5px 10px;color:#434343;cursor:pointer}.exbtn:hover{background:#eee}
+.exstats{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:13px;color:#434343;margin:26px 0 0;padding-top:18px;border-top:1px solid var(--line)}.exstats .exview{font-weight:700;color:var(--before)}.exleg{margin:16px 0 6px 0!important}#explots .cap{margin-top:22px}.exstats b{font-variant-numeric:tabular-nums}.exstats .warn{color:#c43c3c}
+#exchg textarea{width:100%;box-sizing:border-box;min-height:84px;font-family:'JetBrains Mono',Consolas,monospace;font-size:12px;color:#434343;border:1px solid #cbcbcb;border-radius:4px;padding:8px}
+#exchg .exhint{font-size:12.5px;color:var(--muted);margin:0 0 6px}
+@media (max-width:720px){.exopt{grid-template-columns:10px 46px 40px 88px minmax(0,1fr)}.exopt .ru{display:none}}
+/* Diff tab: diff2html as in the config editor, in the page fonts */
+.dhdr{margin:0 0 10px;color:var(--muted)}.dhdr .add{color:#0b8f77}.dhdr .del{color:#c43c3c}
+#diff td{border-bottom:0;line-height:18px}#diff td:not([class*=linenumber]){padding:0}#diff .d2h-file-header{display:none}#diff .d2h-file-wrapper{border-color:var(--line);border-radius:6px}
+#diff .d2h-code-line,#diff .d2h-code-side-line,#diff .d2h-code-linenumber,#diff .d2h-code-side-linenumber{font-family:'JetBrains Mono',Consolas,monospace;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Config impact</h1><div class="sub" id="sub"></div></header>
+  <div class="cfgs" id="cfgs"></div>
+  <div class="tabs" id="tabs"></div>
+  <div class="panel on" data-panel="overview">
+    <div class="hero">
+      <div><div class="big" id="big"></div><div class="bl" id="bl">log file size per minute</div><div class="bl2" id="big2"></div></div>
+      <div><div class="cmp" id="cmp"></div><div class="legend" id="legend"></div></div>
+    </div>
+    <div class="kgroups" id="kpis"></div>
+    <hr class="sep"><div class="ttitle" id="t-size">Size per channel (MB/min)</div>
+    <div class="chs" id="chs"></div>
+    <div id="tlwrap"><hr class="sep"><div class="ttitle" id="t-fps">FPS per channel over time</div><div class="tl" id="tl"></div></div>
+  </div>
+  <div class="panel" data-panel="filters"><div id="idtable"></div></div>
+  <div class="panel" data-panel="explore">
+    <div class="ttitle" id="t-ex">Explore config impact on signals</div><div class="exnote" id="exnote"></div>
+    <div class="exrow">
+      <div class="exf exmsg"><span>CAN message<span id="exqi"></span></span>
+        <div class="combo" id="excombo"><input type="text" id="exq" autocomplete="off" spellcheck="false" placeholder="Search channel, ID, message, signal, accept / reject or prescaler"><div class="combo-list" id="exlist"></div></div></div>
+    </div>
+    <div class="exrow">
+      <label class="exf">Filter<select id="exfil"></select></label>
+      <label class="exf" id="exprew">Prescaler<select id="expre"></select></label>
+      <span class="exf" id="exval"></span>
+      <button type="button" id="exreset" class="exbtn">Reset to config</button>
+      <label class="exctl" id="exctlw"><input type="checkbox" id="exctl" checked>Apply control signal</label>
+    </div>
+    <div class="exbyt" id="exbyt"></div>
+    <div class="exstats" id="exstats"></div>
+    <div class="tl" id="explots"></div>
+    <hr class="sep"><div class="ttitle" id="t-exchg">Your changes</div><div id="exchg"></div>
+  </div>
+  <div class="panel" data-panel="control"><div class="ttitle" id="t-ctl">Control signal</div><div class="tl" id="tlctl"></div><div id="onoffwrap"><hr class="sep"><div class="ttitle" id="t-onoff">On/off per channel</div><div class="tl" id="tlonoff"></div></div></div>
+  <div class="panel" data-panel="diff"><div class="ttitle" id="t-diff">Config changes</div><div class="cfgs dhdr" id="dhdr"></div><div id="diff"></div></div>
+  <ul class="notes" id="notes"></ul>
+  <footer id="foot"></footer>
+</div>
+<div id="tip"></div>
+<script>__UPLOT_JS__</script>
+<script>__DIFF_JS__</script>
+<script>__DATA__</script>
+<script>__DASH_JS__</script>
+<script>__APP_JS__</script>
+<script>__EXPLORE_JS__</script>
+</body>
+</html>

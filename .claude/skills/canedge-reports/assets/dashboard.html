@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__TITLE__</title>
+<link rel="icon" type="image/x-icon" href="__FAVICON__">
+<style>__FONTS__</style>
+<style>__REPORT_CSS__</style>
+<style>__UPLOT_CSS__</style>
+<style>__DASH_CSS__</style>
+<style>__APP_CSS__</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1 id="title"></h1><div class="sub" id="sub"></div></header>
+  <div class="fbar" id="fbar">
+    <div class="frow">
+      <div class="fdev">
+        <button type="button" class="fbtn" id="devbtn"></button>
+        <div class="dpanel" id="devpanel"></div>
+      </div>
+      <div class="frange">
+        <span class="dtin"><input type="text" id="from" placeholder="YY/MM/DD HH:MM" maxlength="16" spellcheck="false" autocomplete="off"><button type="button" class="cal" data-for="fromP" title="Pick a date"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="12" rx="1.5" fill="none" stroke="currentColor"/><path d="M1.5 6h13M5 1v3M11 1v3" stroke="currentColor"/></svg></button><input type="datetime-local" class="dtp" id="fromP" tabindex="-1" aria-hidden="true"></span><span class="fto">to</span><span class="dtin"><input type="text" id="to" placeholder="YY/MM/DD HH:MM" maxlength="16" spellcheck="false" autocomplete="off"><button type="button" class="cal" data-for="toP" title="Pick a date"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="12" rx="1.5" fill="none" stroke="currentColor"/><path d="M1.5 6h13M5 1v3M11 1v3" stroke="currentColor"/></svg></button><input type="datetime-local" class="dtp" id="toP" tabindex="-1" aria-hidden="true"></span>
+        <button type="button" class="fbtn fq" data-q="all">All</button>
+        <button type="button" class="fbtn fq" data-q="30">Last 30 d</button>
+        <button type="button" class="fbtn fq" data-q="7">Last 7 d</button>
+      </div>
+    </div>
+    <div class="brushwrap"><canvas id="brush" height="46"></canvas><div class="blabels"><span id="bl0"></span><span id="bhint"></span><span id="bl1"></span></div></div>
+    <div class="fsum" id="fsum"></div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+  <footer id="foot"></footer>
+</div>
+<div id="tip"></div>
+<script>__UPLOT_JS__</script>
+<script>__DATA__</script>
+<script>__DASH_JS__</script>
+<script>__APP_JS__</script>
+</body>
+</html>

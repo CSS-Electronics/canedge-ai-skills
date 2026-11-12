@@ -1,0 +1,276 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "Single-panel dashboard for visualizing any CAN/LIN data via the Microsoft SQL Server (Synapse) data source",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": 120,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "mssql",
+        "uid": "Microsoft SQL Server"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": 300000,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.1.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "mssql",
+            "uid": "Microsoft SQL Server"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n    DATEADD(MILLISECOND, (DATEPART(MILLISECOND, t) / $__interval_ms) * $__interval_ms, DATEADD(SECOND, FLOOR(DATEDIFF(SECOND, '2020', t) / CEILING($__interval_ms / 1000.0)) * CEILING($__interval_ms / 1000.0), '2020')) AS time,\r\n    ${signal_value:csv}\r\nFROM\r\n    OPENROWSET(\r\n        BULK '${device:csv}/${message:csv}/*/*/*/*',\r\n        DATA_SOURCE = 'ParquetDataLake',\r\n        FORMAT = 'PARQUET'\r\n    ) AS r\r\nWHERE\r\n    CONCAT(r.filepath(1), '-', r.filepath(2), '-', r.filepath(3)) BETWEEN CONVERT(date, $__timeFrom()) AND CONVERT(date, $__timeTo())\r\n    AND $__timeFilter(t)\r\nGROUP BY\r\n    FLOOR(DATEDIFF(SECOND, '2020', t) / CEILING($__interval_ms / 1000.0)), DATEPART(MILLISECOND, t) / $__interval_ms\r\nORDER BY\r\n    time\r\nOFFSET 0 ROWS;\r\n",
+          "refId": "A"
+        }
+      ],
+      "title": "message: ${message:csv} | signal: ${signal}",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "pattern": "/^(${aggregation:pipe})_.*|^time$/"
+            }
+          }
+        }
+      ],
+      "type": "timeseries"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "synapse"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true
+        },
+        "datasource": {
+          "type": "mssql",
+          "uid": "Microsoft SQL Server"
+        },
+        "definition": "SELECT deviceid AS value, metaname AS text\nFROM tbl_aggregations_devicemeta ORDER BY metaname",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "device",
+        "options": [],
+        "query": "SELECT deviceid AS value, metaname AS text\nFROM tbl_aggregations_devicemeta ORDER BY metaname",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true
+        },
+        "datasource": {
+          "type": "mssql",
+          "uid": "Microsoft SQL Server"
+        },
+        "definition": "SELECT MessageName FROM\n    OPENROWSET(\n        BULK '${device:csv}/messages/*/*/*/*',\n        DATA_SOURCE = 'ParquetDataLake',\n        FORMAT = 'PARQUET'\n    ) AS r\nWHERE MessageName <> 'messages'\n ORDER BY MessageName",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "message",
+        "options": [],
+        "query": "SELECT MessageName FROM\n    OPENROWSET(\n        BULK '${device:csv}/messages/*/*/*/*',\n        DATA_SOURCE = 'ParquetDataLake',\n        FORMAT = 'PARQUET'\n    ) AS r\nWHERE MessageName <> 'messages'\n ORDER BY MessageName",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "mssql",
+          "uid": "Microsoft SQL Server"
+        },
+        "definition": "SELECT COLUMN_NAME\nFROM INFORMATION_SCHEMA.COLUMNS\nWHERE TABLE_NAME = 'tbl_' + ${device:singlequote} + '_' + ${message:singlequote}\nAND COLUMN_NAME <> 't'\nORDER BY ORDINAL_POSITION;",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "signal",
+        "options": [],
+        "query": "SELECT COLUMN_NAME\nFROM INFORMATION_SCHEMA.COLUMNS\nWHERE TABLE_NAME = 'tbl_' + ${device:singlequote} + '_' + ${message:singlequote}\nAND COLUMN_NAME <> 't'\nORDER BY ORDINAL_POSITION;",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "mssql",
+          "uid": "Microsoft SQL Server"
+        },
+        "definition": "WITH SplitColumns AS (\n    SELECT TRIM(value) AS ColumnName\n    FROM STRING_SPLIT('${signal:csv}', ',')\n)\nSELECT STRING_AGG(CONCAT(\n    'AVG(', ColumnName, ') AS AVG_', ColumnName, ', ',\n    'MIN(', ColumnName, ') AS MIN_', ColumnName, ', ',\n    'MAX(', ColumnName, ') AS MAX_', ColumnName\n), ', ')\nFROM SplitColumns;",
+        "hide": 2,
+        "includeAll": true,
+        "multi": true,
+        "name": "signal_value",
+        "options": [],
+        "query": "WITH SplitColumns AS (\n    SELECT TRIM(value) AS ColumnName\n    FROM STRING_SPLIT('${signal:csv}', ',')\n)\nSELECT STRING_AGG(CONCAT(\n    'AVG(', ColumnName, ') AS AVG_', ColumnName, ', ',\n    'MIN(', ColumnName, ') AS MIN_', ColumnName, ', ',\n    'MAX(', ColumnName, ') AS MAX_', ColumnName\n), ', ')\nFROM SplitColumns;",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": [
+            "AVG"
+          ],
+          "value": [
+            "AVG"
+          ]
+        },
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "aggregation",
+        "options": [
+          {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": true,
+            "text": "AVG",
+            "value": "AVG"
+          },
+          {
+            "selected": false,
+            "text": "MIN",
+            "value": "MIN"
+          },
+          {
+            "selected": false,
+            "text": "MAX",
+            "value": "MAX"
+          }
+        ],
+        "query": "AVG, MIN, MAX",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "dynamic-dashboard-synapse",
+  "uid": "dynamic-dashboard-synapse",
+  "version": 17,
+  "weekStart": ""
+}

@@ -1,0 +1,455 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "Single-panel dashboard for visualizing any CAN/LIN data via the BigQuery data source",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": 84,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-bigquery-datasource",
+        "uid": "Google BigQuery"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 1,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": 300000,
+            "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
+            "lineWidth": 1,
+            "pointSize": 2,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "_col1"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": []
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.1.5",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-bigquery-datasource",
+            "uid": "Google BigQuery"
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "",
+          "rawQuery": true,
+          "rawSql": "SELECT\r\n  TIMESTAMP_MILLIS(DIV(UNIX_MILLIS(t), $__interval_ms) * $__interval_ms) as time,  \r\n  ${signal_value:csv}\r\nFROM\r\n  ${dataset}.tbl_${device:csv}_${message:csv}\r\nWHERE\r\n  $__timeFilter(t)\r\nGROUP BY\r\n  time",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "message: ${message:csv} | signal: ${signal}",
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "pattern": "/^(${aggregation:pipe})_.*|^time$/"
+            }
+          }
+        }
+      ],
+      "type": "timeseries"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "lakedataset1",
+          "value": "lakedataset1"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "dataset",
+        "options": [
+          {
+            "selected": true,
+            "text": "lakedataset1",
+            "value": "lakedataset1"
+          }
+        ],
+        "query": "lakedataset1",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": true
+        },
+        "datasource": {
+          "type": "grafana-bigquery-datasource",
+          "uid": "Google BigQuery"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "device",
+        "options": [],
+        "query": {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "__default",
+            "region": "__default",
+            "resultReuseEnabled": false,
+            "resultReuseMaxAgeInMinutes": 60
+          },
+          "dataset": "",
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "",
+          "rawQuery": true,
+          "rawSQL": "",
+          "rawSql": "SELECT deviceid AS value, metaname AS text FROM `$dataset.tbl_aggregations_devicemeta` ORDER BY metaname",
+          "refId": "tempvar",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true
+        },
+        "datasource": {
+          "type": "grafana-bigquery-datasource",
+          "uid": "Google BigQuery"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "message",
+        "options": [],
+        "query": {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "__default",
+            "region": "__default",
+            "resultReuseEnabled": false,
+            "resultReuseMaxAgeInMinutes": 60
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "",
+          "rawQuery": true,
+          "rawSQL": "",
+          "rawSql": "SELECT MessageName\r\nFROM `$dataset.tbl_${device}_messages`\r\nWHERE MessageName != 'messages'\r\nORDER BY MessageName ASC",
+          "refId": "tempvar",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-bigquery-datasource",
+          "uid": "Google BigQuery"
+        },
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "signal",
+        "options": [],
+        "query": {
+          "connectionArgs": {
+            "catalog": "__default",
+            "database": "__default",
+            "region": "__default",
+            "resultReuseEnabled": true,
+            "resultReuseMaxAgeInMinutes": 60
+          },
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "",
+          "rawQuery": true,
+          "rawSQL": "",
+          "rawSql": "SELECT \r\n    column_name\r\nFROM \r\n    `$dataset.INFORMATION_SCHEMA.COLUMNS`\r\nWHERE \r\n    table_name = 'tbl_${device:csv}_${message:csv}';",
+          "refId": "tempvar",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        "refresh": 1,
+        "regex": "/^(?!^t$).*$/",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-bigquery-datasource",
+          "uid": "Google BigQuery"
+        },
+        "definition": "",
+        "hide": 2,
+        "includeAll": true,
+        "multi": true,
+        "name": "signal_value",
+        "options": [],
+        "query": {
+          "editorMode": "code",
+          "format": 1,
+          "location": "",
+          "project": "",
+          "rawQuery": true,
+          "rawSql": "WITH SignalTransformations AS (\r\n  SELECT \r\n    ARRAY_CONCAT_AGG([\r\n      'AVG(' || REPLACE(signal, ' ', '') || ') AS AVG_' || signal,\r\n      'MIN(' || REPLACE(signal, ' ', '') || ') AS MIN_' || signal,\r\n      'MAX(' || REPLACE(signal, ' ', '') || ') AS MAX_' || signal\r\n    ]) AS transformations\r\n  FROM UNNEST(SPLIT('${signal:csv}', ',')) AS signal\r\n)\r\nSELECT ARRAY_TO_STRING(transformations, ', ') AS transformed_signals\r\nFROM SignalTransformations;\r\n",
+          "refId": "tempvar",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "AVG"
+          ],
+          "value": [
+            "AVG"
+          ]
+        },
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "aggregation",
+        "options": [
+          {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": true,
+            "text": "AVG",
+            "value": "AVG"
+          },
+          {
+            "selected": false,
+            "text": "MIN",
+            "value": "MIN"
+          },
+          {
+            "selected": false,
+            "text": "MAX",
+            "value": "MAX"
+          }
+        ],
+        "query": "AVG, MIN, MAX",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "dynamic-dashboard-bigquery",
+  "uid": "dynamic-dashboard-bigquery",
+  "version": 51,
+  "weekStart": ""
+}

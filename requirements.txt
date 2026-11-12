@@ -1,0 +1,41 @@
+# Python dependencies for the CANedge AI data analysis skills.
+#
+# Install into a project-local virtual environment:
+#
+#   Windows:        install.bat
+#   macOS / Linux:  python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+#
+# Then open your AI agent (e.g. Claude Code) in this folder; the skills run their scripts via .venv.
+
+# --- data processing (raw stats, decoded Parquet, local SQL) ---
+numpy>=2.0
+pandas>=2.2
+pyarrow>=16.0
+duckdb>=1.1
+
+# --- DBC files (lint, create from Excel specs, plausibility) ---
+cantools>=41.0
+openpyxl>=3.1
+
+# --- configuration files (JSON Schema validation) ---
+jsonschema>=4.21
+
+# --- over-the-air updates (canedge-ota: credential encryption, vendored canedge_manager) ---
+pycryptodome>=3.20
+
+# --- reports (charts embedded in HTML) ---
+matplotlib>=3.8
+
+# --- S3 + Amazon Athena ---
+boto3>=1.34
+
+# --- Google BigQuery data lakes (canedge-lake-query --bigquery; sqlglot translates the shared SQL) ---
+google-cloud-bigquery>=3.20
+google-cloud-storage>=2.10   # buckets with a Google service account key (gcs_s3.py)
+sqlglot>=25.0
+
+# --- Azure Synapse data lakes (canedge-lake-query --synapse; serverless SQL pool, SQL login; no ODBC driver needed) ---
+pymssql>=2.3
+
+# --- Grafana HTTP API (canedge-grafana grafana_api.py: import / check dashboards; setup_env.py --grafana) ---
+grafana-client>=5.0

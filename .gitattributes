@@ -1,0 +1,4 @@
+# Shell scripts need LF (Git Bash / sh break on CRLF, e.g. the SessionStart hook), batch files CRLF - regardless of
+# the user's core.autocrlf
+*.sh  text eol=lf
+*.bat text eol=crlf

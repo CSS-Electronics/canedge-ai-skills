@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__TITLE__</title>
+<link rel="icon" type="image/x-icon" href="__FAVICON__">
+<style>__FONTS__</style>
+<style>__REPORT_CSS__</style>
+<style>__DASH_CSS__</style>
+<style>__DIFF_CSS__</style>
+<style>
+/* DBC changes page on the dashboard kit, styled like the config impact page (canedge-config) */
+.files{font-family:'JetBrains Mono',Consolas,monospace;font-size:12.5px;color:#434343;margin-top:4px}
+.ar{color:var(--muted);font-weight:400;margin:0 6px}
+.dhdr{margin:0 0 10px;color:var(--muted)}.dhdr .add{color:#0b8f77}.dhdr .del{color:#c43c3c}
+.c-added{background:rgba(16,203,169,.15);color:#0b8f77}.c-removed{background:rgba(255,102,102,.15);color:#c43c3c}
+.c-changed{background:rgba(255,153,0,.15);color:#b36b00}.c-renamed{background:rgba(61,133,198,.13);color:#2f6aa0}
+.verdict{display:inline-block;margin:14px 0 4px;font-size:15px;font-weight:700}.verdict.same{color:#0b8f77}.verdict.diff{color:#b36b00}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+.notes{font-size:11.5px;color:#9aa1ab;margin:28px 0 0;padding-left:18px}
+/* Diff tab: diff2html as in the DBC editor and the config editor, in the page fonts */
+#diff td{border-bottom:0;line-height:18px}#diff td:not([class*=linenumber]){padding:0}#diff .d2h-file-header{display:none}#diff .d2h-file-wrapper{border-color:var(--line);border-radius:6px}
+#diff .d2h-code-line,#diff .d2h-code-side-line,#diff .d2h-code-linenumber,#diff .d2h-code-side-linenumber{font-family:'JetBrains Mono',Consolas,monospace;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>DBC changes</h1><div class="sub" id="sub"></div></header>
+  <div class="files" id="files"></div>
+  <div class="verdict" id="verdict"></div>
+  <div class="tabs" id="tabs"></div>
+  <div class="panel on" data-panel="diff"><div class="ttitle" id="t-diff">File changes</div><div class="files dhdr" id="dhdr"></div><div id="diff"></div></div>
+  <div class="panel" data-panel="changes"><div id="ctable"></div></div>
+  <ul class="notes" id="notes"></ul>
+  <footer id="foot"></footer>
+</div>
+<div id="tip"></div>
+<script>__DIFF_JS__</script>
+<script>__DATA__</script>
+<script>__DASH_JS__</script>
+<script>__APP_JS__</script>
+</body>
+</html>

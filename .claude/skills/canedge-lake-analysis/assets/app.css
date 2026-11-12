@@ -1,0 +1,49 @@
+/* Analysis page: Only what the kit (dashboard.css) does not have */
+.apanel{margin:6px 0 4px}
+.fixnote{font-size:12px;color:var(--muted);margin:4px 0}
+.fixed.dim>*:not(.fixnote){opacity:.38}
+.fixed.dim .fixnote{color:var(--red)}
+.anote{font-size:13px;color:#434343}
+.alegend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#6b717b;margin:6px 0 0}
+.alegend i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.sharebars{display:grid;grid-template-columns:minmax(90px,180px) 1fr auto;gap:6px 10px;align-items:center;font-size:13px}
+.sb-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-t{display:flex;height:16px;border-radius:3px;overflow:hidden;background:#eef1f4}
+.sb-t span{display:block;height:100%;border-right:1px solid #fff}
+.sb-v{font-variant-numeric:tabular-nums;color:#6b717b;font-size:12px}
+.hbars{display:grid;grid-template-columns:minmax(90px,200px) 1fr auto;gap:6px 10px;align-items:center;font-size:13px}
+.hb-l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-t{height:14px;background:#eef1f4;border-radius:3px;overflow:hidden}.hb-t span{display:block;height:100%}
+.hb-v{font-variant-numeric:tabular-nums;color:#434343;font-size:12.5px;text-align:right}
+.vbars{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:6px;align-items:end;height:200px;border-bottom:1px solid #cbcbcb;padding:0 2px}
+.vb{display:flex;flex-direction:column;justify-content:flex-end;height:100%;min-width:0}
+.vb-b{background:var(--blue);border-radius:3px 3px 0 0;min-height:1px}
+.vb-v{font-size:11.5px;color:#6b717b;text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden}
+.vbars-l{display:grid;grid-template-columns:repeat(var(--n),1fr);gap:6px;font-size:11.5px;color:#6b717b;text-align:center;margin-top:4px;padding:0 2px}
+.vbars-l span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vbars-x{font-size:12px;color:#6b717b;text-align:center;margin-top:2px}
+a.show{white-space:nowrap;display:inline-block;font-size:12px;color:var(--blue);margin-left:6px;text-decoration:none;border:1px solid #cfe0f1;border-radius:9px;padding:0 7px}
+a.show:hover{background:#eaf2fa}
+@media (max-width:640px){.sharebars{grid-template-columns:90px 1fr}.sb-v{display:none}}
+.qline{font-size:15px;line-height:1.75;color:#6b717b;font-style:italic;margin:10px 0 4px}
+.qline b{font-style:normal;color:#434343}
+.cline{font-size:15px;line-height:1.75;color:#434343;margin:6px 0 0}  /* the question: as large as the answer bullets */
+.fcards{display:grid;grid-template-columns:repeat(var(--k,4),minmax(0,1fr));gap:12px;margin:12px 0 34px}  /* equal widths */
+@media (max-width:980px){.fcards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){.fcards{grid-template-columns:minmax(0,1fr)}}
+.fcard{padding:12px 14px;display:grid;grid-template-rows:auto auto 18px auto;min-width:0}
+.fcard.link{cursor:pointer;transition:box-shadow .15s,border-color .15s}.fcard.link:hover{box-shadow:0 2px 10px rgba(61,133,198,.18)}
+.ft{display:flex;align-items:center;gap:6px;min-width:0;font-family:'JetBrains Mono',Consolas,monospace;font-size:12px;letter-spacing:.04em;color:#434343;text-transform:uppercase}
+.ftt{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ft .info{flex:none;margin-left:0;text-transform:none}
+.farr{margin-left:auto;flex:none;color:#9aa3ad;font-size:14px;text-transform:none}.fcard.link:hover .farr{color:var(--blue)}
+.fv{font-size:32px;line-height:1.15;font-weight:700;color:#434343;margin:12px 0 2px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fd{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fn{font-size:12.5px;color:#6b717b;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.delta{font-weight:700;color:var(--blue)}.delta.good{color:#0b8f77}.delta.bad{color:#c43c3c}
+.exsum{margin:0 0 16px;padding-left:20px;font-size:15px;line-height:1.75;color:#434343}
+.exsum li{padding-left:2px}.exsum li::marker{color:var(--blue)}.exsum b{font-weight:700;color:#2b2b2b}
+.exsep{border:0;border-top:1px solid var(--line,#e6e9ee);margin:0 0 6px}
+.alleg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;color:#434343;margin:0 0 4px}
+.alleg i{display:inline-block;width:14px;height:3px;border-radius:2px;margin:0 6px 3px 0;vertical-align:middle}
+.alleg .alread{margin-left:auto;color:#6b717b;font-variant-numeric:tabular-nums}

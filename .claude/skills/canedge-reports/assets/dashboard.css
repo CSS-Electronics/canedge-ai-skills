@@ -1,0 +1,55 @@
+/* Shared dashboard styles (canedge-reports dashboard kit) on top of the report CSS (build_report.CSS) */
+html{scrollbar-gutter:stable}  /* reserve the scrollbar space: No left/right jump between short and long tabs */
+.fbar{position:sticky;top:0;z-index:5;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 14px 8px;margin:16px 0 4px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.frow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.fbtn{background:#fff;border:1px solid #cbcbcb;border-radius:4px;padding:5px 10px;font:inherit;font-size:13px;color:#434343;cursor:pointer}
+.fbtn:hover{background:#eee}.fbtn.on{border-color:var(--blue);color:var(--blue)}
+.fdev{position:relative}
+.dpanel{display:none;position:absolute;top:34px;left:0;z-index:6;background:#fff;border:1px solid #cbcbcb;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.12);padding:8px 10px;max-height:320px;overflow:auto;min-width:220px}
+.dpanel.open{display:block}.dpanel label{display:flex;gap:8px;align-items:center;padding:3px 2px;font-size:13px;cursor:pointer;white-space:nowrap}
+.dpanel .dact{display:flex;gap:8px;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:4px}
+.dpanel .dact button{background:none;border:0;color:var(--blue);font:inherit;font-size:12.5px;cursor:pointer;padding:0}
+.frange{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:auto}
+.dtin{position:relative;display:inline-flex;align-items:center;border:1px solid #cbcbcb;border-radius:4px;background:#fff}.dtin input[type=text]{font:inherit;font-size:13px;padding:4px 2px 4px 8px;border:0;border-radius:4px;color:#434343;width:118px;font-variant-numeric:tabular-nums;background:transparent}.dtin input[type=text]:focus{outline:none}.dtin:focus-within{border-color:var(--blue)}.dtin input.bad{color:var(--red)}.dtin:has(input.bad){border-color:var(--red)}.cal{display:flex;align-items:center;background:none;border:0;padding:4px 7px 4px 2px;color:#6b717b;cursor:pointer}.cal:hover{color:var(--blue)}.dtp{position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0;border:0;padding:0;pointer-events:none}
+.fto{font-size:13px;color:var(--muted)}
+.brushwrap{margin-top:8px}#brush{width:100%;display:block;cursor:crosshair;border-radius:3px}
+.blabels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:2px}
+.fsum{display:none;font-size:13px;color:var(--muted)}
+.empty{padding:24px 0;color:var(--muted)}
+.uplot{font-family:inherit}.u-legend{font-size:12px}.u-legend .u-marker{border-radius:2px}
+.dchart{margin:10px 0 18px}.ufile{text-align:center;font-size:12px;color:var(--muted);margin-top:2px;font-family:ui-monospace,Consolas,monospace}.dchart .dname{font-weight:600;font-size:12.5px;margin:0 0 2px}
+@media print{.ufile{display:none}.fbar{position:static;box-shadow:none}.frow,.brushwrap{display:none}.fsum{display:block}
+.panel{display:block!important}.panel>h2:first-child{display:block!important}.tabs{display:none}}
+/* Website fonts (embedded): Open Sans for text, JetBrains Mono for titles */
+body,button,input{font-family:'Open Sans',-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+h1,.ttitle,.kgroup .gt,.dname{font-family:'JetBrains Mono',Consolas,monospace;font-weight:400;letter-spacing:-.3px}
+h1{font-size:23px;color:#434343}.ttitle{font-size:15.5px;color:#434343;margin:22px 0 6px}.tab{font-size:15px}
+.kgroup .gt{font-size:12px;letter-spacing:.04em;color:#434343}.dname{font-size:13px;color:#434343}
+/* Section separator between titled blocks in a tab */
+hr.sep{border:0;border-top:1px solid var(--line);margin:34px 0 0}hr.sep+.tbl .ttitle,hr.sep+.ttitle{margin-top:24px}
+/* KPI groups: Visual identity accent per group */
+.kgroup{border-top:3px solid var(--c,var(--blue))}
+/* Tables: Sort, search, pages */
+.thint{font-family:'Open Sans',sans-serif;font-size:12px;color:var(--muted);margin-left:12px;letter-spacing:0}.tbl table{margin:4px 0}.tbl th,.tbl td{white-space:nowrap}.tbl td.bar{min-width:72px;width:16%}.tbl .bc .t{flex:0 0 auto;min-width:0;font-variant-numeric:tabular-nums}.tbl .bc .f{display:block}.tbl tr.sub .bc .f{opacity:.42}.tcount{color:var(--muted)}
+.tbar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:4px 0 6px;font-size:13px}
+.tbar input[type=search]{font-size:13px;padding:4px 9px;border:1px solid #cbcbcb;border-radius:4px;min-width:240px;color:#434343}
+.tbar input[type=search]:focus{outline:none;border-color:var(--blue)}
+.tbar label{display:flex;gap:6px;align-items:center;color:#434343;cursor:pointer;user-select:none}
+th.s{cursor:pointer;user-select:none}th.s:hover{color:var(--blue)}
+th .sa{font-size:9px;margin-left:5px;color:#c3c8cf;vertical-align:1px}th.on .sa{color:var(--blue)}th.on{color:var(--blue)}
+td.none{color:var(--muted);text-align:center;padding:14px}
+.tfoot{display:flex;gap:8px;align-items:center;justify-content:flex-end;font-size:12.5px;color:var(--muted);min-height:4px}
+.tfoot button{background:#fff;border:1px solid #cbcbcb;border-radius:4px;padding:3px 10px;font-size:12.5px;color:#434343;cursor:pointer}
+.tfoot button:hover:not(:disabled){background:#eee}.tfoot button:disabled{opacity:.4;cursor:default}
+.mcell{display:inline-block;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}.dmeta{margin-left:8px;color:var(--muted);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis}.badge.b-meta{background:rgba(255,102,102,.15);color:#c43c3c}.badge.b-cfg{background:rgba(255,153,0,.15);color:#b36b00}.badge.b-fw{background:rgba(61,133,198,.13);color:#2f6aa0}.badge{display:inline-block;padding:0 8px;border-radius:9px;font-size:11.5px;font-weight:700;line-height:18px;background:rgba(255,153,0,.15);color:#b36b00}
+@media print{.tbar,.tfoot{display:none}hr.sep{margin-top:20px}}
+/* KPI rows: Label + value on one line, the note below over the full tile width */
+.krow{display:grid;grid-template-columns:1fr auto;align-items:baseline;column-gap:8px}.krow .v{text-align:right}.krow .n{grid-column:1/-1;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.fcell{border-bottom:1px dotted #9aa1ab;cursor:help}
+.tbl table.fixed{table-layout:fixed}.tbl table.fixed td,.tbl table.fixed th{overflow:hidden;text-overflow:ellipsis}.tbl table.fixed td.bar{min-width:0;width:auto}
+.uchart .u-legend .u-series{pointer-events:none}  /* legend is live info only: Hiding a series would break the stack */
+.ok{color:var(--green);font-weight:700}
+.badge{text-transform:lowercase}  /* tags: short + lower case in every dashboard */
+.kgroup .gt .info{text-transform:none}  /* the (i) stays a lower-case i in upper-case card titles (as in the tabs) */
+/* Grouped table header (e.g. BEFORE / AFTER) */
+th.grp{text-align:center;font-family:'JetBrains Mono',Consolas,monospace;font-weight:400;font-size:12.5px;letter-spacing:.04em;background:#fff}th.grp.g0{border-bottom:0}

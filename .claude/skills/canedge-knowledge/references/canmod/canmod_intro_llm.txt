@@ -1,0 +1,417 @@
+# CANmod Intro
+
+> Get started guide for the CANmod range of sensor-to-CAN modules (CANmod.gps, CANmod.temp, CANmod.input, CANmod.router). Covers introduction, configuration, installation, software tools (SavvyCAN, Python), and real-time USB streaming. It is strongly recommended to also download the technical CANmod Docs for the relevant variant and use these in combination with this introduction material. The CANmod Docs are also available in an AI/LLM-friendly text file version. Further, if the CANmod is being used in combination with a CANedge, it is recommended to download the 'Docs for AI' variants of the CANedge Intro and CANedge Docs for use in combination with this material.
+> Online version: https://canlogger.csselectronics.com/canmod-intro/
+
+2026, CSS Electronics
+
+## How to use this file
+
+- Each section below starts with a line `[Title]:` matching its entry in the Sections list, followed by `Path:` (its location in the documentation) and `URL:` (the live page). Grep `^\[.*\]:$` for a line-numbered map of all sections, then read only the section you need.
+- Links point to the live documentation. Footnotes are written as `[^N]` and defined at the end of the same section.
+- The technical [CANmod Docs](https://www.csselectronics.com/pages/can-bus-hardware-software-docs#canmod-resources) (configuration fields, hardware, firmware) are a separate document with its own LLM text file.
+- If the CANmod is used with a CANedge, also use the CANedge Intro and CANedge Docs LLM files: [CANedge Intro](https://canlogger.csselectronics.com/canedge-getting-started/ce2/llms.txt) and [CANedge Docs](https://www.csselectronics.com/pages/can-bus-hardware-software-docs#canedge-resources).
+
+## Sections
+
+- [CANmod - get started]: Quick-start overview of the CANmod sensor-to-CAN modules: workflow steps (configure, install, stream/process), quick links to software tools, and where to find each section.
+  - [About this manual]: About the CANmod Intro manual: scope (getting started plus software tools), structure by workflow step, link to the full CANmod Docs, and admonition notation conventions.
+- [Configure your device]: Configure the CANmod via the online or offline JSON editor: USB connection, load default files from the DEVICE volume, edit, save Configuration File to the CONFIG volume, and power-cycle to apply.
+- [Install]: Install the CANmod on a CAN bus: pinout/termination/bit-rate checks, connection to a CANedge 2nd port, daisy-chaining multiple CANmods, and links to CAN troubleshooting guides.
+  - [Primary CAN troubleshooting tips]: Troubleshoot the CANmod primary CAN (DB9): verify pinout/wiring/power/termination, check the Configuration File and bit-rate, verify the recording device setup, and test USB streaming via SavvyCAN.
+  - [Secondary CAN troubleshooting tips]: Troubleshoot the CANmod.router secondary CAN buses (DB25): pinout, wiring, power, termination, bit-rates, default CAN ID filters, monitoring/silent mode, and SavvyCAN USB streaming test.
+- [Software]: Software tools for the CANmod USB serial interface: SavvyCAN GUI for live raw/DBC-decoded analysis, and Python (python-can-csscan-serial / python-can-csscan-mux) for scripted streaming.
+  - [SavvyCAN]: Stream CANmod CAN data over USB into the open-source SavvyCAN GUI: installation, System Clock preference, COM-port connection, DBC loading, CSV export, plotting, and custom-frame transmission.
+  - [Python]: Stream CANmod CAN data over USB via Python using python-can-csscan-serial (any CANmod) or python-can-csscan-mux (CANmod.router demuxed streams). Pointers to install and example workflows.
+- [Stream data in real-time via USB]: Stream CANmod CAN data in real-time over USB by powering the device via USB and following the SavvyCAN or Python streaming guides. Warns against simultaneously connecting USB and the output DB9.
+
+## Source files
+
+Full sources behind the tools and setups in this document (not included here, fetch on demand):
+
+- [python-can-csscan-mux](https://pypi.org/project/python-can-csscan-mux/): python-can interface for streaming CANmod.router data via USB
+
+---
+
+[CANmod - get started]:
+Path: CANmod - get started
+URL: https://canlogger.csselectronics.com/canmod-intro/introduction/
+
+# CANmod - get started
+
+This guide provides a quick overview of the CANmod and related software tools.
+
+### Quick links
+
+[config editor](https://canlogger.csselectronics.com/canmod-intro/configure-device/)
+
+### Newsletter & links
+
+[Join our newsletter](https://sibforms.com/serve/MUIEAGPWkuLOidMbNUZ4eBnP8FLQleTVIPTKwKumz0t2xv-O51FPo2CVleSAZBx02m2UGU8l4NGne-4E6cWSd8cxGJZ3cjP7d3Ja7AWU3cR8I1vgGlM--GT81WJzyfRfIyAYVoO9Wkoirkx_Z65Cg9RKF_WG6g-JzMx3dacAI84XqgP2yQdlQrAU2cfEOfw3DkH9ij1MhemEKkkU)  or [follow us on LinkedIn](https://www.linkedin.com/company/css-electronics/) for major firmware/software updates.
+
+* [CANmod Docs](https://www.csselectronics.com/pages/can-bus-hardware-software-docs#canmod-resources) - full documentation for the CANmod
+
+![CANmod sensor to CAN](https://cdn.shopify.com/s/files/1/0579/8032/1980/files/canmod-sensor-to-can-bus-converters.jpg)
+
+---
+
+[About this manual]:
+Path: CANmod - get started > About this manual
+URL: https://canlogger.csselectronics.com/canmod-intro/introduction/about-manual/
+
+# About this manual
+
+---
+
+## Purpose
+
+The CANmod Intro focuses on the following:
+
+* How to get started with the CANmod
+* How to use relevant software tools
+
+The document is structured by the steps you go through when using the device for the first time.
+
+---
+
+## Other documentation
+
+The [CANmod Docs](https://www.csselectronics.com/pages/can-bus-hardware-software-docs#canmod-resources) serve as the product manual. The Docs detail the hardware, configuration and concepts beyond the scope of this intro.
+
+---
+
+## Notation used
+
+The following notation is used throughout this documentation:
+
+### Admonitions
+
+**Note:** Used to highlight supplementary information
+
+**Warning:** Used if incorrect use may result in major loss of data and/or time
+
+---
+
+[Configure your device]:
+Path: Configure your device
+URL: https://canlogger.csselectronics.com/canmod-intro/configure-device/
+
+# Configure your device
+
+Below we describe how to configure your CANmod - for details see the [CANmod Docs](https://www.csselectronics.com/pages/can-bus-hardware-software-docs#canmod-resources).
+
+1. Use a mini USB adapter to connect the CANmod to your PC
+2. Verify that the green LED lights up
+3. Locate the device (it will show up like an SD card)
+4. Open the CANmod config editor
+5. Load the JSON files from the `DEVICE` volume in the editor
+6. Make your changes and download the Configuration File
+7. Add the updated Configuration File to your `CONFIG` volume
+8. Right-click the `CONFIG` volume and safely eject it
+
+The new Configuration File is loaded by your device the next time it is powered on.
+
+[Online editor](https://canlogger.csselectronics.com/canmod-editor)
+
+**Note:** The `DEVICE` volume always contains the *default* files. Updating your configuration does *not* result in changes to the Configuration File on the `DEVICE` volume
+
+**Note:** If your device FW is e.g. `01.04.01`, your Configuration File must be named `config-01.04.json`
+
+**Note:** If your config is invalid, the device will not output data
+
+---
+
+[Install]:
+Path: Install
+URL: https://canlogger.csselectronics.com/canmod-intro/install/
+
+# Install
+
+Before you connect your CANmod, it is important that you do the following:
+
+1. Read the installation guide in the [CANmod Docs](https://www.csselectronics.com/pages/can-bus-hardware-software-docs#canmod-resources)
+2. Verify that the pin-out of your application, adapter cable & CANmod match
+3. Review if CAN termination should be enabled (on by default)
+4. Verify that the device bit-rate matches your CAN bus
+5. Verify that the device CAN IDs are unique on your CAN bus
+
+If you experience issues with the primary CAN (DB9), see [this guide](https://canlogger.csselectronics.com/canmod-intro/install/can-troubleshooting/).
+
+If you experience issues with the secondary CAN (DB25) on a CANmod.router, see [this guide](https://canlogger.csselectronics.com/canmod-intro/install/secondary-can-troubleshooting/).
+
+**Warning:** Connecting the CANmod to an existing CAN bus without carefully reviewing the above can disrupt CAN communication and result in critical issues
+
+## Connect to CANedge
+
+A common use case is to connect the CANmod to a CANedge 2nd port. For details on this setup, see the [CANedge Intro](https://www.csselectronics.com/pages/can-bus-hardware-software-docs#canedge-resources) (Record/CANmod section).
+
+## Daisy chain multiple CANmods
+
+You can easily daisy chain multiple CANmod devices together by ensuring the below:
+
+1. Ensure each unit uses globally unique CAN IDs
+2. Ensure each unit uses the same bit-rate
+3. Update your DBC file(s) according to any CAN ID changes
+
+---
+
+[Primary CAN troubleshooting tips]:
+Path: Install > Primary CAN troubleshooting tips
+URL: https://canlogger.csselectronics.com/canmod-intro/install/can-troubleshooting/
+
+# Primary CAN troubleshooting tips
+
+The below can be used in troubleshooting the CANmod primary CAN (DB9).
+
+---
+
+## Check your basic setup
+
+1. Check your pinout: Verify that your CANmod, adapter cable and application pinouts match
+2. Check your wiring: Confirm that the CAN L/H wires are both connected
+3. Check your power supply: Verify that you provide a 7-26V power supply to the DB9 connector
+4. Check that the green `PWR` LED lights up when power is provided
+5. Check that the CAN bus is properly terminated (incl. if the device termination should be on/off)
+6. Check that another CAN node is actively acknowledging CAN frames from the CANmod
+
+---
+
+## Check your Configuration File
+
+1. Ensure that you are using a valid Configuration File created via the [editor](https://canlogger.csselectronics.com/canmod-intro/configure-device/)
+2. Ensure that the Configuration File is named correctly[^1]
+3. Ensure that the configured CANmod bit-rate matches your application CAN bus
+4. Ensure that at least some CAN messages are enabled in the Configuration File
+
+---
+
+## Check your CAN recording device
+
+1. Double check that you’ve correctly setup the recording device
+2. If using a CANedge, see our guide on using the CANedge with a CANmod[^2]
+3. Ensure that the recording device does not apply filters and is not in ‘silent mode’
+4. Ensure that you are not applying a DBC file during the evaluation[^3]
+
+---
+
+## Try USB streaming via SavvyCAN
+
+1. Test if you are able to stream data via SavvyCAN as per our [guide](https://canlogger.csselectronics.com/canmod-intro/software-tools/savvycan/)
+
+---
+
+## Contact us
+
+If you’re still unable to record data, please contact us. In this case, please share the below:
+
+1. Full details on your CANmod installation setup incl. pictures
+2. Details on the power supply, termination and adapter cables
+3. The CANmod Configuration File you’re using and a screenshot of your `CONFIG` volume
+4. Detailed explanation of your observed vs. expected behavior
+
+---
+[^1]: If you’re e.g. using FW 01.03.01, the Configuration File must be named `config-01.03.json` as explained in the CANmod Docs
+[^2]: See our [CANedge Intro](https://www.csselectronics.com/pages/can-bus-hardware-software-docs#canedge-resources) (Record/CANmod section)
+[^3]: Some recording devices/software may directly attempt to DBC decode the data from the CANmod. It is generally best to avoid this during troubleshooting and instead determine if the raw CAN frames are coming through as expected
+
+---
+
+[Secondary CAN troubleshooting tips]:
+Path: Install > Secondary CAN troubleshooting tips
+URL: https://canlogger.csselectronics.com/canmod-intro/install/secondary-can-troubleshooting/
+
+# Secondary CAN troubleshooting tips
+
+The below can be used in troubleshooting the CANmod.router secondary CAN (DB25).
+
+---
+
+## Check your basic setup
+
+1. Check your pinouts: Verify that your CANmod.router, adapters and application pinouts match
+2. Check your wiring: Confirm that the CAN L/H wires are connected
+3. Check your power supply: Verify that you provide 5-26V via the DB9 or 5V via USB
+4. Verify that you are connecting to valid CAN buses - and that they are broadcasting data
+5. Check that the configured CAN-S bit-rates match your CAN buses (default is `250K`)
+6. Check that the CAN bus is properly terminated (mainly relevant in test setups)
+7. Check that you are using the default CAN ID filters without modification
+8. Check that the CAN-S Mode is *not* set to ‘Monitoring’[^1]
+
+---
+
+## Try USB streaming via SavvyCAN
+
+1. Test if you are able to stream data via SavvyCAN as per our [guide](https://canlogger.csselectronics.com/canmod-intro/software-tools/savvycan/)
+
+---
+
+## Special cases
+
+* If logging from cars, you may be unable to log raw CAN data via the OBD2 connector. In this case, you can try recording OBD2 data instead by sending OBD2 requests. See e.g. the CANedge Intro/Record/OBD2 for guidance
+
+If you’re still unable to record data, please contact us.
+
+---
+[^1]: Monitoring mode aka silent mode implies that the device does not acknowledge CAN frames on the bus. This is OK to use if connecting to an active CAN bus with multiple CAN nodes, but it will not work if you are trying to communicate with a single CAN node in e.g. a test bench setup
+
+---
+
+[Software]:
+Path: Software
+URL: https://canlogger.csselectronics.com/canmod-intro/software-tools/
+
+# Software
+
+The CANmod serial interface can be used in multiple software tools:
+
+1. [SavvyCAN](https://canlogger.csselectronics.com/canmod-intro/software-tools/savvycan/) - stream raw CANmod data, DBC decode it, create plots and more
+2. [Python](https://canlogger.csselectronics.com/canmod-intro/software-tools/python/) - stream raw or DBC decoded data in real-time via Python
+
+**Note:** You can download your CANmod DBC file in the [CANmod Docs](https://www.csselectronics.com/pages/can-bus-hardware-software-docs#canmod-resources)
+
+---
+
+[SavvyCAN]:
+Path: Software > SavvyCAN
+URL: https://canlogger.csselectronics.com/canmod-intro/software-tools/savvycan/
+
+# SavvyCAN
+
+[Feature Intro](https://www.csselectronics.com/screen/page/can-bus-interface-savvycan)
+
+---
+
+[SavvyCAN](https://www.csselectronics.com/screen/page/can-bus-interface-savvycan) is ideal for analyzing raw and/or DBC decoded CAN bus data.
+
+You can [stream CAN data](https://canlogger.csselectronics.com/canmod-intro/stream-data/) via USB from the CANmod.
+
+---
+
+## Installation
+
+Windows: Download below build (which includes the relevant plugin).
+
+[Windows](https://canlogger.csselectronics.com/files/savvycan/SavvyCAN_v213_bdc68b8.zip)
+
+[github](https://github.com/collin80/SavvyCAN) | [30 min intro video](https://www.youtube.com/watch?v=kdA5Gdf3FAk)
+
+---
+
+## Use ‘System Clock’
+
+In ‘File/Preferences/Time Keeping’, select ‘System Clock’ and restart the program.
+
+---
+
+## Connect your interface
+
+1. Setup your device to stream data (see the [Stream](https://canlogger.csselectronics.com/canmod-intro/stream-data/) section)
+2. Click ‘Connection/Open Connection Window/Add New Device Connection’
+3. Select ‘QT SerialBus Devices/csscan’ and the relevant COM port[^1]
+4. Click ‘Create New Connection’ - the raw data stream should now appear in the main window
+
+**Note:** For the CANmod.router you can connect up to 4 of the ‘virtual channels’ one-by-one to stream demuxed data - as if directly connected to the secondary CAN interfaces
+
+**Note:** The bit-rate is controlled via the device [configuration](https://canlogger.csselectronics.com/canmod-intro/configure-device/) - it cannot be controlled via SavvyCAN
+
+---
+
+## Main window
+
+Below we outline a number of key functionalities of the main window:
+
+- Auto Scroll Window: Toggle if the window should scroll with the data (streaming only)
+- Overwrite Mode: Show only a single line for each unique ID (with the latest frame information)
+- Interpret Frames: Use the loaded DBC to decode matched frames (see the Data column)
+- Frame Filtering: Show/hide specific CAN IDs
+
+---
+
+## Load DBC file(s)
+
+To load a DBC file, click File/DBC File Manager/Load and set the ID match criteria (`Exact`). You can toggle DBC decoding via the ‘Interpret Frames’ button.
+
+---
+
+## Export DBC decoded data to CSV
+
+You can export the decoded frames to CSV via ‘File/Save Decoded Frames CSV’.
+
+**Note:** Youu can optionally filter the exported data via the Frame Filtering section.
+
+---
+
+## Useful analysis tools
+
+Below we outline some of the ‘RE Tools’ that can be useful for analysis. For a more detailed documentation, see the above links for the official docs.
+
+### Graph Data
+
+This lets you plot specific CAN signals in real-time. Simply right click the plot and select ‘Add new graph’. You can select a signal based on your DBC file. You can also right-click the graph to reset the view and/or follow the end of the graph (for streaming).
+
+---
+
+## Transmit custom CAN frames
+
+You can transmit custom CAN frames in real-time via SavvyCAN in multiple ways.
+
+### Custom frame sender
+
+This tool is embedded in the main window and lets you specify one or more custom CAN frames to be transmitted. You can specify the ID, bus, payload, frequency - and even apply [‘modifications’](https://www.savvycan.com/docs/customsender.html) to customize the payload.
+
+```text
+Example settings for sending a static CAN frame every 1000 ms:
+
+En: Click the checkbox to enable
+Bus: 0
+ID: 0x123
+Data: 0x00 0x11 0x22 0x33 0x44 0x55 0x66 0x77
+Interval: 1000
+```
+
+### Playback
+
+The Playback window lets you load a CAN bus log file (e.g. from a CLX000/CANedge by converting it to Vector ASC) - and replay it onto a CAN bus. This can be useful in e.g. reverse engineering use cases or simulation. You can use the ‘original frame timing’ when playing it back and optionally filter the data to only replay a subset of the CAN frames.
+
+---
+[^1]: If you have multiple interfaces connected in parallel, you can find their COM ports by opening your Device Manager/COM ports overview
+
+---
+
+[Python]:
+Path: Software > Python
+URL: https://canlogger.csselectronics.com/canmod-intro/software-tools/python/
+
+# Python
+
+---
+
+Python is a popular programming language for working with CAN data from the CANmod.
+
+You can work with the CANmod data in Python via below:
+
+1. [python-can-csscan-mux](https://pypi.org/project/python-can-csscan-mux/): Use **python-can** to stream data via USB with the CANmod.router
+2. [python-can-csscan-serial](https://canlogger.csselectronics.com/tools-docs/csscan_serial/python_csscan): Use **python-can** to stream data via USB using any CANmod
+
+---
+
+## CANmod.router USB streaming
+
+If you wish to use the CANmod.router to stream CAN data via USB, we recommend to start with the USB streaming example from the ‘mux’ documentation. After this, you can incorporate the ‘mux layer’ into the additional examples provided within the ‘serial’ documentation.
+
+---
+
+[Stream data in real-time via USB]:
+Path: Stream data in real-time via USB
+URL: https://canlogger.csselectronics.com/canmod-intro/stream-data/
+
+# Stream data in real-time via USB
+
+The CANmod can be used as a serial interface to stream data in real-time via USB to your PC.
+
+To stream data data via the CANmod, follow the below steps:
+
+1. Power the CANmod via USB and verify that the green LED lights up
+2. Follow the installation/streaming guide for [SavvyCAN](https://canlogger.csselectronics.com/canmod-intro/software-tools/savvycan/) or [Python](https://canlogger.csselectronics.com/canmod-intro/software-tools/python/)
+
+**Warning:** You should not connect both the output DB9 and USB of the CANmod at the same time

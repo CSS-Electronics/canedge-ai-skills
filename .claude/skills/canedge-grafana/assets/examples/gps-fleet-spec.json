@@ -1,0 +1,39 @@
+{
+  "title": "CANedge GPS device + fleet overview",
+  "uid": "canedge-gps-fleet-overview",
+  "description": "Device dashboard in the layout of the official internal-GPS template (stats, route map, GNSS/IMU signals, dynamic signal panel) + a fleet section (CANedge internal GNSS/IMU on CAN9)",
+  "time": {"from": "now-7d", "to": "now"},
+  "variables": [
+    {"type": "device"}
+  ],
+  "panels": [
+    {"type": "stat", "title": "Max speed (m/s)", "message": "can9_gnssspeed", "signals": ["speed"], "agg": "MAX",
+     "reduce": "max", "unit": "velocityms", "w": 3, "h": 4},
+    {"type": "stat", "title": "Trip distance (m)", "message": "can9_gnssdistance", "signals": ["distancetrip"], "agg": "MAX",
+     "reduce": "lastNotNull", "unit": "lengthm", "w": 3, "h": 4},
+    {"type": "stat", "title": "Altitude (AVG)", "message": "can9_gnssaltitude", "signals": ["altitude"], "agg": "AVG",
+     "reduce": "mean", "unit": "lengthm", "decimals": 0, "w": 3, "h": 4},
+    {"type": "stat", "title": "Satellites (AVG)", "message": "can9_gnssstatus", "signals": ["satellites"], "agg": "AVG",
+     "reduce": "mean", "decimals": 0, "w": 3, "h": 4},
+    {"type": "stat", "title": "Speed (AVG, m/s)", "message": "can9_gnssspeed", "signals": ["speed"], "agg": "AVG",
+     "reduce": "mean", "unit": "velocityms", "decimals": 1, "w": 3, "h": 4},
+    {"type": "geomap", "title": "Route (color = speed in km/h)", "position_message": "can9_gnsspos",
+     "color_message": "can9_gnssspeed", "color_signal": "speed", "color_scale": 3.6, "w": 9, "h": 12},
+    {"type": "timeseries", "title": "Speed (m/s)", "message": "can9_gnssspeed", "signals": ["speed"], "agg": ["AVG", "MAX"],
+     "unit": "velocityms", "w": 8, "h": 6},
+    {"type": "timeseries", "title": "Attitude (deg)", "message": "can9_gnssattitude", "signals": ["roll", "pitch", "heading"],
+     "agg": "AVG", "unit": "degree", "w": 7, "h": 6},
+    {"type": "dynamic", "w": 8, "h": 7},
+    {"type": "timeseries", "title": "Acceleration (m/s^2)", "message": "can9_imudata",
+     "signals": ["accelerationx", "accelerationy", "accelerationz"], "agg": "AVG", "unit": "accMS2", "w": 7, "h": 7},
+    {"type": "state-timeline", "title": "Fix type", "message": "can9_gnssstatus", "signals": ["fixtype"],
+     "value_map": {"0": "No fix", "1": "Dead reckoning only", "2": "2D-fix", "3": "3D-fix",
+                   "4": "GNSS + dead reckoning combined", "5": "Time only fix"},
+     "w": 9, "h": 5},
+    {"type": "row", "title": "Fleet"},
+    {"type": "timeseries", "title": "Max speed per device (m/s)", "message": "can9_gnssspeed", "signals": ["speed"],
+     "agg": "MAX", "devices": ["11223344", "12345678"], "unit": "velocityms", "w": 16, "h": 8},
+    {"type": "bargauge", "title": "Max speed in the period (m/s)", "message": "can9_gnssspeed", "signals": ["speed"],
+     "agg": "MAX", "reduce": "max", "devices": ["11223344", "12345678"], "unit": "velocityms", "w": 8, "h": 8}
+  ]
+}

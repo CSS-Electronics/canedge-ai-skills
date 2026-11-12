@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/Scripts/python.exe .claude/skills/*)",
+      "Bash(.venv/bin/python .claude/skills/*)",
+      "PowerShell(.venv/Scripts/python.exe .claude/skills/*)",
+      "Bash(cmd //c '.\\install.bat')",
+      "Bash(sh install.sh)",
+      "PowerShell(.\\install.bat)"
+    ],
+    "ask": [
+      "Bash(.venv/* .claude/skills/canedge-s3-sd-upload/scripts/sd_upload.py upload*)",
+      "Bash(.venv/* .claude/skills/canedge-s3-migrate/*)",
+      "PowerShell(.venv/* .claude/skills/canedge-s3-sd-upload/scripts/sd_upload.py upload*)",
+      "PowerShell(.venv/* .claude/skills/canedge-s3-migrate/*)",
+      "Bash(.venv/* .claude/skills/canedge-lake-admin/scripts/control_files.py*push *)",
+      "Bash(.venv/* .claude/skills/canedge-lake-admin/scripts/control_files.py*remove *)",
+      "Bash(.venv/* .claude/skills/canedge-lake-admin/scripts/lake_ops.py*start *)",
+      "PowerShell(.venv/* .claude/skills/canedge-lake-admin/scripts/control_files.py*push *)",
+      "PowerShell(.venv/* .claude/skills/canedge-lake-admin/scripts/control_files.py*remove *)",
+      "PowerShell(.venv/* .claude/skills/canedge-lake-admin/scripts/lake_ops.py*start *)",
+      "Bash(.venv/* .claude/skills/canedge-ota/scripts/ota.py*apply *)",
+      "PowerShell(.venv/* .claude/skills/canedge-ota/scripts/ota.py*apply *)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {"type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/setup_check.sh\"", "timeout": 30}
+        ]
+      }
+    ]
+  }
+}
