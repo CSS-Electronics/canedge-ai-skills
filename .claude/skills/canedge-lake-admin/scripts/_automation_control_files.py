@@ -1,5 +1,5 @@
-# VENDORED COPY - do not edit here. Source: canedge-mdftoparquet-automation/modules/control_files.py (v4.4.0,
-# commit 11df453). Copied by the canedge-datalake-update release skill (CANedge Intro repo) at every automation release.
+# VENDORED COPY - do not edit here. Source: canedge-mdftoparquet-automation/modules/control_files.py (v4.5.0,
+# commit 61a7a7a). Copied by the canedge-datalake-update release skill (CANedge Intro repo) at every automation release.
 # Validation of the optional control files in the input bucket/container root (events.json, custom-messages.json,
 # geofences.json, aggregations.json, backlog.json, dbc-groups.json, routing.json).
 #
@@ -20,7 +20,7 @@ import re
 from datetime import datetime
 from typing import NamedTuple
 
-CONTROL_FILES_VERSION = "4.4.0"
+CONTROL_FILES_VERSION = "4.5.0"
 
 CONTROL_FILES = ("events.json", "custom-messages.json", "geofences.json", "aggregations.json", "backlog.json",
                  "dbc-groups.json", "routing.json")
@@ -34,6 +34,8 @@ DEVICE_RE = re.compile(r"^[0-9A-F]{8}$")
 DEVICE_ANY_CASE_RE = re.compile(r"^[0-9A-Fa-f]{8}$")
 TABLE_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")    # valid in Athena, BigQuery and Synapse
 DBC_FILE_RE = re.compile(r"^(can|lin)[0-9]{1,2}-.+\.dbc$")   # can11-, can12-, ... = CANmod.router channels
+DBC_NAME_HINT = ("can1-<name>.dbc, can11-<name>.dbc or lin1-<name>.dbc (lower case) in the bucket root or in one "
+                 "folder, e.g. dbc/can1-<name>.dbc")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 RASTER_RE = re.compile(r"^\d+(\.\d+)?([a-zA-Z]+)$")
 RASTER_UNITS = ("ns", "us", "ms", "s", "min", "h", "D")
@@ -493,23 +495,53 @@ def _validate_dbc_groups(data, r, **_):
                 seen[device] = i
         files = _require(r, group, "dbc_files", path, "list", _is_str_list, "a non-empty list of DBC file names")
         for name in files or []:
-            if not DBC_FILE_RE.match(name):
-                r.error(_join(path, "dbc_files"), f'"{name}" must be a bucket root DBC file named like '
-                                                  "can1-<name>.dbc, can11-<name>.dbc or lin1-<name>.dbc (lower case)")
+            problem = dbc_entry_issue(name)
+            if problem:
+                r.error(_join(path, "dbc_files"), problem)
         _unknown_keys(r, group, ("devices", "dbc_files"), path)
     # Optional (v4.4.0+): DBC files added to the files of every device that is in a group
+    common = []
     if "common_dbc_files" in data:
         common = data["common_dbc_files"]
         if not _is_str_list(common):
             r.error("common_dbc_files", f"must be a non-empty list of DBC file names, got {json.dumps(common)}")
+            common = []
         else:
             for name in common:
-                if not DBC_FILE_RE.match(name):
-                    r.error("common_dbc_files", f'"{name}" must be a bucket root DBC file named like '
-                                                "can1-<name>.dbc, can11-<name>.dbc or lin1-<name>.dbc (lower case)")
+                problem = dbc_entry_issue(name)
+                if problem:
+                    r.error("common_dbc_files", problem)
             if isinstance(groups, list) and not groups:
                 r.warning("common_dbc_files", "no effect without dbc_groups (devices in no group get all DBC files)")
+    # The decoder gets a device's DBC files in one folder, so two entries must not share a file name (v4.5.0+)
+    for i, group in enumerate(groups or []):
+        if isinstance(group, dict) and _is_str_list(group.get("dbc_files")):
+            clash = dbc_file_name_clashes(group["dbc_files"] + common)
+            if clash:
+                r.error(f"dbc_groups[{i}].dbc_files", f"{clash} have the same file name (with common_dbc_files) - "
+                                                      "a device's DBC files need unique file names")
     _unknown_keys(r, data, ("dbc_groups", "common_dbc_files"), "")
+
+
+def dbc_entry_issue(name):
+    """None if name is a valid dbc-groups.json DBC entry, else the problem: A bucket root DBC file name, or (v4.5.0+)
+    <folder>/<file name> with one folder level that is not a device folder."""
+    folder, sep, file = name.rpartition("/")
+    if "\\" in name or not DBC_FILE_RE.match(file):
+        return f'"{name}" must be a DBC file named like {DBC_NAME_HINT}'
+    if sep and ("/" in folder or folder in ("", ".", "..")):
+        return f'"{name}" must be a bucket root DBC file or a DBC file in one folder, e.g. dbc/{file}'
+    if sep and DEVICE_ANY_CASE_RE.match(folder):
+        return f'"{name}": {folder} is a device folder - use another folder for DBC files, e.g. dbc/{file}'
+    return None
+
+
+def dbc_file_name_clashes(names):
+    """'"a", "b"' for different entries with the same file name (e.g. can1-x.dbc and dbc/can1-x.dbc), else ''."""
+    by_file = {}
+    for name in dict.fromkeys(names):
+        by_file.setdefault(name.rpartition("/")[2], []).append(name)
+    return ", ".join(f'"{n}"' for same in by_file.values() if len(same) > 1 for n in same)
 
 
 # -----------------------------------------------------------

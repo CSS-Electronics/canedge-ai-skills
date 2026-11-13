@@ -17,8 +17,8 @@ r"""Check, build, upload and remove the data lake control files in the input buc
 
 push/remove write to the bucket: Only after the user OKed the shown diff (the harness asks before each call). Allowed
 targets: The control files (events.json, custom-messages.json, geofences.json, aggregations.json, backlog.json,
-dbc-groups.json, routing.json) and can<n>-*.dbc / lin<n>-*.dbc in the bucket root. passwords.json is never read,
-written or printed.
+dbc-groups.json, routing.json) and can<n>-*.dbc / lin<n>-*.dbc in the bucket root or in one folder (automation
+v4.5.0+, e.g. push FILE --as dbc/can1-x.dbc). passwords.json is never read, written or printed.
 
 Usage:
   python control_files.py check data/lake-admin/<bucket>/drafts/events.json
@@ -100,23 +100,41 @@ class Lake:
         return {d: m for d, m in self._msgs.items() if devices is None or d in devices}
 
     def dbc_index(self):
-        """canedge-lake-query DbcIndex over the root DBCs (+ dbc-groups.json), downloaded once to data/lake-admin."""
+        """canedge-lake-query DbcIndex over the root DBCs + dbc-groups.json (+ the DBC files in a folder that it
+        lists, v4.5.0+), downloaded once to data/lake-admin."""
         if self._dbc is None:
+            import shutil
             from _dbc import DbcIndex
             base = ADMIN_DIR / self.bucket / "root"
             (base / "dbc").mkdir(parents=True, exist_ok=True)
             for f in base.glob("dbc/*.dbc"):
                 if f.name not in self.root["dbcs"]:
                     f.unlink()
+            for d in (p for p in (base / "dbc").iterdir() if p.is_dir()):   # folder DBCs: fetched fresh below
+                shutil.rmtree(d)
             for name in self.root["dbcs"]:
                 local = base / "dbc" / name
                 if not (local.exists() and local.stat().st_size == self.root["keys"][name]):
                     self.s3.download_file(self.bucket, name, str(local))
             groups = base / "dbc-groups.json"
             groups.unlink(missing_ok=True)
+            folder_dbcs = []
             if "dbc-groups.json" in self.root["keys"]:
                 self.s3.download_file(self.bucket, "dbc-groups.json", str(groups))
-            self._dbc = DbcIndex(base) if self.root["dbcs"] else False
+                try:
+                    data = json.loads(groups.read_text(encoding="utf-8-sig"))
+                    folder_dbcs = sorted(references("dbc-groups.json", data)["dbcs"])
+                except (ValueError, AttributeError, TypeError):
+                    pass                                   # an invalid file: check() reports it
+            for name in (f for f in folder_dbcs if "/" in f and not acf.dbc_entry_issue(f)):
+                local = base / "dbc" / name
+                local.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    self.s3.download_file(self.bucket, name, str(local))
+                except Exception:  # noqa: BLE001 - a missing folder DBC: cross_check reports it
+                    pass
+            has_folder = any(p.is_dir() for p in (base / "dbc").iterdir())
+            self._dbc = DbcIndex(base) if self.root["dbcs"] or has_folder else False
         return self._dbc or None
 
 
@@ -219,6 +237,11 @@ def check(path: Path, name: str, offline: bool) -> dict:
             issue("error", "common_dbc_files", f"needs automation v4.4.0+ (v{root['version'] or '?'} ignores the key, "
                                                "so the devices in groups would be decoded without these DBC files). "
                                                "Update the lake first, or list the files in each group's dbc_files")
+        if (name == "dbc-groups.json" and (not root["version"] or _vkey(root["version"]) < (4, 5, 0)) and
+                (folder := sorted({f for f in references(name, data)["dbcs"] if "/" in f}))):
+            issue("error", "dbc_files", f"{', '.join(folder)}: DBC files in a folder need automation v4.5.0+ "
+                                        f"(v{root['version'] or '?'} stops every log file with a CONTROL FILE ERROR). "
+                                        "Update the lake first, or keep the DBC files in the bucket root")
         ref = references(name, data)
         cross_check(lk, name, data, ref, issue)
     except CheckError as e:
@@ -232,7 +255,10 @@ def cross_check(lk: Lake, name: str, data, ref: dict, issue) -> None:
         if DEVICE_RE.match(d) and d not in root["devices"]:
             issue("warning", "devices", f"{d} has no folder in the input bucket {lk.bucket}")
     for f in sorted(ref["dbcs"]):
-        if f not in root["keys"]:
+        if "/" in f:
+            if not _object_exists(lk, f):
+                issue("error", "dbc_files", f"{f} is not in the input bucket {lk.bucket}")
+        elif f not in root["keys"]:
             issue("error", "dbc_files", f"{f} is not in the input bucket root (DBC files there: "
                                         f"{', '.join(root['dbcs']) or 'none'})")
     if name == "routing.json" and lk.info["cloud"] == "aws":
@@ -311,6 +337,11 @@ def _bucket_exists(s3, bucket: str) -> bool:
         return True
     except ClientError as e:
         return e.response.get("Error", {}).get("Code") not in ("404", "NoSuchBucket")
+
+
+def _object_exists(lk: Lake, key: str) -> bool:
+    """A key in the input bucket (e.g. a DBC file in a folder) exists. Other errors than 'not found' count as found."""
+    return get_root(lk, key) is not None
 
 
 def backlog_checks(lk: Lake, data: dict, issue) -> None:
@@ -430,10 +461,22 @@ def build_backlog(a) -> dict:
 def target_name(name: str) -> str:
     if name == "passwords.json":
         raise SystemExit("ERROR: passwords.json is never handled by this skill (it holds secrets): The user edits it")
+    if "/" in name and not acf.dbc_entry_issue(name):
+        return name                                   # a DBC file in one folder, e.g. dbc/can1-x.dbc (v4.5.0+)
     if "/" in name or "\\" in name or not (name in acf.CONTROL_FILES or acf.DBC_FILE_RE.match(name)):
-        raise SystemExit(f"ERROR: {name} is not a control file or root DBC file "
-                         f"({', '.join(acf.CONTROL_FILES)}, can<n>-*.dbc, lin<n>-*.dbc)")
+        raise SystemExit(f"ERROR: {name} is not a control file or DBC file ({', '.join(acf.CONTROL_FILES)}, "
+                         "can<n>-*.dbc, lin<n>-*.dbc in the root or one folder, e.g. dbc/can1-<name>.dbc)")
     return name
+
+
+def folder_write_denied(e: Exception, name: str) -> None:
+    """A DBC file in a folder that the programmatic credentials may not overwrite/delete: Stacks before the folder
+    DBC update (AWS: Delete denied in folders; Google: overwrite = delete) - say so instead of a bare AccessDenied."""
+    code = getattr(e, "response", {}).get("Error", {}).get("Code")
+    if "/" in name and code in ("AccessDenied", "403"):
+        raise SystemExit(f"ERROR: Access denied for {name}: The data lake's programmatic access permissions predate "
+                         "DBC files in folders (update the stack/Terraform), or replace/delete the file in the "
+                         "cloud console") from e
 
 
 def get_root(lk: Lake, name: str) -> bytes | None:
@@ -450,7 +493,7 @@ def backup(lk: Lake, name: str, old: bytes | None) -> str | None:
     if old is None:
         return None
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    p = ADMIN_DIR / lk.bucket / "backups" / f"{stamp}-{name}"
+    p = ADMIN_DIR / lk.bucket / "backups" / f"{stamp}-{name.replace('/', '_')}"
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_bytes(old)
     return p.as_posix()
@@ -484,9 +527,13 @@ def push(a) -> dict:
     lk = Lake()
     new, old = path.read_bytes(), get_root(lk, name)
     saved = backup(lk, name, old)
-    lk.s3.put_object(Bucket=lk.bucket, Key=name, Body=new,
-                     **({} if lk.info["cloud"] == "google" else {"ContentType": "application/json" if
-                                                                  name.endswith(".json") else "text/plain"}))
+    try:
+        lk.s3.put_object(Bucket=lk.bucket, Key=name, Body=new,
+                         **({} if lk.info["cloud"] == "google" else {"ContentType": "application/json" if
+                                                                      name.endswith(".json") else "text/plain"}))
+    except Exception as e:  # noqa: BLE001 - explained for folder DBCs, re-raised otherwise
+        folder_write_denied(e, name)
+        raise
     size = lk.s3.head_object(Bucket=lk.bucket, Key=name)["ContentLength"]
     return {"uploaded": f"{lk.bucket}/{name}", "bytes": len(new), "verified": size == len(new),
             "backup": saved, "replaced": old is not None, "diff": diff(old, new, name)}
@@ -499,7 +546,11 @@ def remove(a) -> dict:
     if old is None:
         return {"removed": None, "note": f"{name} is not in {lk.bucket}"}
     saved = backup(lk, name, old)
-    lk.s3.delete_object(Bucket=lk.bucket, Key=name)
+    try:
+        lk.s3.delete_object(Bucket=lk.bucket, Key=name)
+    except Exception as e:  # noqa: BLE001 - explained for folder DBCs, re-raised otherwise
+        folder_write_denied(e, name)
+        raise
     return {"removed": f"{lk.bucket}/{name}", "backup": saved, "still_there": get_root(lk, name) is not None}
 
 

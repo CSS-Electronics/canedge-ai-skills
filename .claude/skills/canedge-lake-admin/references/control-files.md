@@ -77,6 +77,11 @@ decoded until the file is fixed or removed. The backlog and aggregation jobs fai
 - dbc-groups `common_dbc_files` (optional, v4.4.0+): Top-level list of root DBCs added to the files of every device
   in a group (e.g. the 22 J1939-73 DM1 DBCs on CAN1 + CAN2), instead of repeating them per group. Older automations
   ignore the key silently (grouped devices decode without them): `check` reports it as an error there
+- dbc-groups DBC files in one folder (v4.5.0+): `dbc_files`/`common_dbc_files` entries may be `<folder>/can1-x.dbc`
+  (one level, not a device folder; file names unique per device). A missing folder DBC stops the log file with a
+  CONTROL FILE ERROR (a missing root DBC is skipped silently). Devices in no group still get the root DBCs only.
+  Upload with `push FILE --as dbc/can1-x.dbc`. Replacing/deleting a folder DBC needs the updated stack/Terraform
+  permissions (older ones: AccessDenied, `push`/`remove` say so)
 - routing (Amazon): `mirror_to_default` must be `true`/`false` without quotes; client buckets
   `<input>-<client>-parquet` must exist (else the default bucket is used); `from_date` = recording date
 
@@ -89,6 +94,9 @@ decoded until the file is fixed or removed. The backlog and aggregation jobs fai
 - Backlog: Start with one session, check `runs` + `logs`, then the rest
 
 ## Lakes on older versions
+
+v4.4.0: Same rules as v4.5.0, except dbc-groups.json entries must be root DBC files: A folder entry
+(`dbc/can1-x.dbc`) is a CONTROL FILE ERROR (`check` reports it as an error).
 
 v4.3.2: Same rules as v4.4.0, except dbc-groups.json `common_dbc_files` is ignored (no error, the grouped devices
 just miss those DBCs; `check` reports it as an error) and unknown top-level keys give no warning.

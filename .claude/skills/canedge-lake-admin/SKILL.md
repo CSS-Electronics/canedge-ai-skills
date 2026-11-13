@@ -31,7 +31,7 @@ Run from the repo root with `.venv\Scripts\python.exe .claude/skills/canedge-lak
 | `control_files.py check FILE [--offline]` | The automation's own validation (vendored `_automation_control_files.py`, the code the functions run) + cross-checks: Message folders (case-sensitive), signal names in the root DBCs, devices, DBC files, routing buckets, backlog files + duplicates | - |
 | `control_files.py pull NAME` | Current root file -> `data/lake-admin/<bucket>/drafts/NAME` | - |
 | `control_files.py backlog --device X [--start T] [--end T]` | Builds `drafts/backlog.json` from the S3 inventory (logging time from the 'Timestamp' metadata) + a rough run time vs the job's limit | - |
-| `control_files.py push FILE` | Re-checks (refuses on errors), backs up the root object to `data/lake-admin/<bucket>/backups/`, uploads, verifies, prints the diff | Bucket root |
+| `control_files.py push FILE [--as NAME]` | Re-checks (refuses on errors), backs up the root object to `data/lake-admin/<bucket>/backups/`, uploads, verifies, prints the diff. A DBC in one folder (v4.5.0+): `--as dbc/can1-x.dbc` | Bucket root (DBC: or one folder) |
 | `control_files.py remove NAME` | Backup, then delete (the feature is off again, e.g. to stop an email flood) | Bucket root |
 | `lake_ops.py status` | Automation version, root control files + DBCs, function results (24 h), last job runs | - |
 | `lake_ops.py diagnose KEY` | One log file: Object + trigger suffix -> invocation result + errors -> Parquet output -> catalog tables | - |

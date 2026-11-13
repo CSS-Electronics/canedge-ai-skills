@@ -96,7 +96,7 @@
 Full sources behind the automation and deployment steps in this document (not included here, fetch on demand):
 
 - [create-s3-input-bucket-v1.4.0.json](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/stacks/latest-stacks-output/create-s3-input-bucket-v1.4.0.json): AWS CloudFormation template that creates the S3 input bucket and the IAM user the devices upload with
-- [data-lake-v4.3.2-vG.6.0.json](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/stacks/latest-stacks-output/data-lake-v4.3.2-vG.6.0.json): AWS CloudFormation template for the Amazon Parquet data lake (summarised under 'Deployed resources' in the Amazon Parquet data lake section)
+- [data-lake-v4.5.0-vG.6.0.json](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/stacks/latest-stacks-output/data-lake-v4.5.0-vG.6.0.json): AWS CloudFormation template for the Amazon Parquet data lake (summarised under 'Deployed resources' in the Amazon Parquet data lake section)
 - [canedge-mdftoparquet-automation](https://github.com/CSS-Electronics/canedge-mdftoparquet-automation): Source of the MF4-to-Parquet cloud functions (AWS Lambda/Glue, Google, Azure) incl. backlog, aggregation, events and custom signals
 - [canedge-google-cloud-terraform](https://github.com/CSS-Electronics/canedge-google-cloud-terraform): Terraform deployment of the Google input bucket, MF4-to-Parquet automation and BigQuery
 - [canedge-azure-cloud-terraform](https://github.com/CSS-Electronics/canedge-azure-cloud-terraform): Terraform deployment of the Azure input container, MF4-to-Parquet automation and Synapse
@@ -2706,7 +2706,7 @@ This guide lets you set up an automated data pre-processing workflow, including:
 1. Upload your [prefixed DBC files](https://canlogger.csselectronics.com/canedge-getting-started/ce3/log-file-tools/mdf4-decoders/parquet-data-lake/) (e.g. `can1-xyz.dbc`) to your bucket root via the [S3 console](https://s3.console.aws.amazon.com/s3/buckets)[^3]
 2. Upload below 4 files[^4] (zip file and Python scripts) to your bucket root
 
-[`Lambda zip`](https://canlogger.csselectronics.com/files/canedge-intro/log-file-tools/mdf4-decoders/parquet-data-lake/mdf-to-parquet-amazon-function-v4.3.2.zip) | [`Mapping script`](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/parquet-data-lake-interfaces/athena/create_glue_database_from_s3-vG.6.0.py) | [`Backlog script`](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/parquet-data-lake/process_backlog_amazon_entry-v4.3.2.py) | [`Aggregation script`](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/parquet-data-lake/process_aggregation_amazon_entry-v4.3.2.py)
+[`Lambda zip`](https://canlogger.csselectronics.com/files/canedge-intro/log-file-tools/mdf4-decoders/parquet-data-lake/mdf-to-parquet-amazon-function-v4.5.0.zip) | [`Mapping script`](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/parquet-data-lake-interfaces/athena/create_glue_database_from_s3-vG.6.0.py) | [`Backlog script`](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/parquet-data-lake/process_backlog_amazon_entry-v4.5.0.py) | [`Aggregation script`](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/parquet-data-lake/process_aggregation_amazon_entry-v4.5.0.py)
 
 ---
 
@@ -2717,7 +2717,7 @@ This guide lets you set up an automated data pre-processing workflow, including:
 3. Click ‘Stack actions/Create change set for current stack’
 4. Click ‘Replace current template’ and enter below:
    ```text
-   https://css-electronics-resources.s3.eu-central-1.amazonaws.com/stacks/data-lake-v4.3.2-vG.6.0.json
+   https://css-electronics-resources.s3.eu-central-1.amazonaws.com/stacks/data-lake-v4.5.0-vG.6.0.json
    ```
 5. Enter a ‘UniqueID’ (e.g. `datalake05`)[^7]
 6. Enter a valid email for notifications on Lambda errors/events[^8]
@@ -2760,7 +2760,7 @@ Advanced: The AWS resources created by the stack.
 
 ### Deployed resources
 
-Template `data-lake-v4.3.2-vG.6.0.json` (`<...>` are stack parameters).
+Template `data-lake-v4.5.0-vG.6.0.json` (`<...>` are stack parameters).
 
 **Parameters**
 
@@ -2795,7 +2795,7 @@ Template `data-lake-v4.3.2-vG.6.0.json` (`<...>` are stack parameters).
 | `AmazonS3FullAccessBucketKeys` | IAM::AccessKey | Keys of the device user (outputs C06/C08) |
 | `AthenaAccessKey` | IAM::AccessKey | Keys of the Athena user (outputs A01/A02) |
 | `S3LimitedAccessUserAccessKey` | IAM::AccessKey | Keys of the above user (outputs A07/A08) |
-| `ProgrammaticAccessManagedPolicy` | IAM::ManagedPolicy | Root DBC/JSON deletes, Glue job runs, logs |
+| `ProgrammaticAccessManagedPolicy` | IAM::ManagedPolicy | Root JSON and DBC deletes (DBC also in one folder), Glue job runs, logs |
 | `S3LimitedAccessManagedPolicy` | IAM::ManagedPolicy | Read/write input and output buckets, SNS |
 | `FullAccessToSpecificBucket` | IAM::Policy | Full access to the input bucket |
 | `AthenaAccessPolicy-<uniqueid>` | IAM::Policy | Athena permissions (Athena + programmatic users) |
@@ -2900,7 +2900,7 @@ This guide lets you set up an automated data pre-processing workflow, including:
 1. Upload your [prefixed DBC files](https://canlogger.csselectronics.com/canedge-getting-started/ce3/log-file-tools/mdf4-decoders/parquet-data-lake/) (e.g. `can1-xyz.dbc`) to your bucket root via the [console](https://console.cloud.google.com/)[^1]
 2. Upload below 4 files[^2] to your bucket root
 
-[`Cloud function zip`](https://canlogger.csselectronics.com/files/canedge-intro/log-file-tools/mdf4-decoders/parquet-data-lake/mdf-to-parquet-google-function-v4.3.2.zip) | [`Mapping function zip`](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/parquet-data-lake-interfaces/bigquery/bigquery-map-tables-vT.5.0.zip) | [`Backlog zip`](https://canlogger.csselectronics.com/files/canedge-intro/log-file-tools/mdf4-decoders/parquet-data-lake/backlog-processor-google-v4.3.2.zip)  | [`Aggregation zip`](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/parquet-data-lake/aggregation-processor-google-v4.3.2.zip)
+[`Cloud function zip`](https://canlogger.csselectronics.com/files/canedge-intro/log-file-tools/mdf4-decoders/parquet-data-lake/mdf-to-parquet-google-function-v4.5.0.zip) | [`Mapping function zip`](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/parquet-data-lake-interfaces/bigquery/bigquery-map-tables-vT.5.0.zip) | [`Backlog zip`](https://canlogger.csselectronics.com/files/canedge-intro/log-file-tools/mdf4-decoders/parquet-data-lake/backlog-processor-google-v4.5.0.zip)  | [`Aggregation zip`](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/parquet-data-lake/aggregation-processor-google-v4.5.0.zip)
 
 **Note:** If you later need to update the integration, upload the new files and repeat the steps below
 
@@ -2981,7 +2981,7 @@ This guide lets you set up an automated data pre-processing workflow, including:
 1. Upload the [prefixed DBC files](https://canlogger.csselectronics.com/canedge-getting-started/ce3/log-file-tools/mdf4-decoders/parquet-data-lake/) (e.g. `can1-xyz.dbc`) to your input container root via the [console](https://portal.azure.com/#browse/Microsoft.Storage%2FStorageAccounts)[^2]
 2. Upload below zip[^3] to your container root
 
-[`Cloud function zip`](https://canlogger.csselectronics.com/files/canedge-intro/log-file-tools/mdf4-decoders/parquet-data-lake/mdf-to-parquet-azure-function-v4.3.2.zip)
+[`Cloud function zip`](https://canlogger.csselectronics.com/files/canedge-intro/log-file-tools/mdf4-decoders/parquet-data-lake/mdf-to-parquet-azure-function-v4.5.0.zip)
 
 **Note:** If you later need to update the function zip, upload the new version and repeat the steps below
 
@@ -3204,6 +3204,26 @@ You may have an Amazon/Google/Azure bucket/container that contains multiple devi
 4. Verify that your automation now only applies the device specific DBC files
 
 [`dbc-groups.json`](https://canlogger.csselectronics.com/canedge-getting-started/ce3/_static/files/log-file-tools/mdf4-decoders/automation-json-files/dbc-groups.json)
+
+```json
+{
+  "common_dbc_files": ["can9-database-01.09.dbc"],
+  "dbc_groups": [
+    {
+      "devices": ["2A896980", "2F6913DB", "18D508A1"],
+      "dbc_files": ["can1-typeA.dbc", "can2-mydbc2.dbc"]
+    },
+    {
+      "devices": ["12345678"],
+      "dbc_files": ["can1-typeB.dbc", "can2-mydbc2.dbc"]
+    }
+  ]
+}
+```
+
+Each device uses the `dbc_files` of the first group that contains it, plus the optional `common_dbc_files` used by all your groups (e.g. the [CAN9 GNSS/IMU DBC](https://canlogger.csselectronics.com/canedge-getting-started/ce3/record-data/internal-gnss-imu/)).Devices that are not in any group use all DBC files in the input bucket/container root.
+
+From v4.5.0 you can also keep the DBC files in one folder of the input bucket/container, e.g. `"dbc/can1-typeA.dbc"`. The file name still starts with the channel prefix (`can1-`, `lin1-` etc.), and file names must be unique per device.
 
 ---
 [^1]: If all device groups have globally unique CAN IDs across all DBC files, you can simply add all the DBC files to the S3 input bucket root. In this case, the MF4 decoder will attempt to use all of them across all devices

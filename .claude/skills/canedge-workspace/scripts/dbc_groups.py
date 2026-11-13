@@ -48,7 +48,8 @@ def load_dbc(path: Path):
 
 
 def channels_for(fname: str) -> list[str]:
-    m = PREFIX_RE.match(fname)
+    """Channel(s) from the file name prefix; a dbc-groups.json entry in a folder (dbc/can1-x.dbc) uses its file name."""
+    m = PREFIX_RE.match(fname.rpartition("/")[2])
     return [m.group(1).upper()] if m else ["CAN1", "CAN2"]
 
 
@@ -293,7 +294,7 @@ def cmd_check(project: Path) -> int:
             if not (dbc_dir / f).exists():
                 errors.append(f"group {gi}: {f} not found in {dbc_dir}")
                 continue
-            if not PREFIX_RE.match(f):
+            if not PREFIX_RE.match(f.rpartition("/")[2]):
                 warnings.append(f"group {gi}: {f} has no canN- prefix (can1-, can2-, can11-, ...), so it applies to CAN1 AND CAN2")
             for ch in channels_for(f):
                 per_channel.setdefault(ch, []).append(f)
