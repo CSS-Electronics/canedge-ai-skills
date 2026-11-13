@@ -132,6 +132,11 @@ def profile_problem() -> str | None:
 def use_env(name: str | None, exc: type[BaseException] = SystemExit) -> None:
     """--env NAME: Use credentials/NAME.env (also in subprocesses). Raises exc if that profile does not exist."""
     if name:
+        if os.environ.get("CANEDGE_ENV") != name:   # switching profiles: Drop what load_env set from the old one
+            for k, v in list(_LOADED.items()):
+                if os.environ.get(k) == v:
+                    del os.environ[k]
+            _LOADED.clear()
         os.environ["CANEDGE_ENV"] = name
         if not profile_path().exists():
             msg = profile_problem()
@@ -175,10 +180,14 @@ def read_env_file(path: Path) -> dict:
     return out
 
 
+_LOADED: dict[str, str] = {}   # variables load_env set from a profile (use_env clears them on a profile switch)
+
+
 def load_env() -> None:
     """Load the selected profile into the environment, without overriding existing env vars."""
     for k, v in read_env_file(profile_path()).items():
-        os.environ.setdefault(k, v)
+        if k not in os.environ:
+            os.environ[k] = _LOADED[k] = v
 
 
 def lake() -> dict:
