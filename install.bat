@@ -43,6 +43,9 @@ if errorlevel 1 (
 )
 
 echo.
+REM MF4 converters mdf2csv + mdf2mdf and decoder mdf2parquet_decode -> the skills' bin/ folders (pinned versions,
+REM MD5-checked; manifest TOOLS in canedge-workspace/scripts/tools.py). A build elsewhere: Set CANEDGE_MDF2CSV /
+REM CANEDGE_MDF2MDF / CANEDGE_MDF2PARQUET. Reinstall only the tools: install_tools.py (--force re-downloads)
 echo [4/4] Downloading the CSS Electronics MF4 converter + decoder ...
 ".venv\Scripts\python.exe" .claude\skills\canedge-workspace\scripts\install_tools.py
 if errorlevel 1 (

@@ -27,10 +27,14 @@ echo "[2/4] Upgrading pip ..."
 echo "[3/4] Installing dependencies from requirements.txt ..."
 .venv/bin/python -m pip install -r requirements.txt
 
+# MF4 converters mdf2csv + mdf2mdf and decoder mdf2parquet_decode -> the skills' bin/ folders (pinned versions,
+# MD5-checked; manifest TOOLS in canedge-workspace/scripts/tools.py). Builds: Linux x64/ARM64 (+ Windows x64).
+# A build elsewhere: Set CANEDGE_MDF2CSV / CANEDGE_MDF2MDF / CANEDGE_MDF2PARQUET. Reinstall only the tools:
+# .venv/bin/python .claude/skills/canedge-workspace/scripts/install_tools.py [--force]
 echo "[4/4] Downloading the CSS Electronics MF4 converter + decoder ..."
 if [ "$(uname -s)" = "Darwin" ]; then
   echo "Skipped: There is no macOS build of the MF4 tools. Data lake / S3 / DBC / config skills work; for MF4 log"
-  echo "         files use a Linux VM/container or set CANEDGE_MDF2CSV / CANEDGE_MDF2PARQUET to a build elsewhere."
+  echo "         files use a Linux VM/container or set CANEDGE_MDF2CSV / CANEDGE_MDF2MDF / CANEDGE_MDF2PARQUET to a build elsewhere."
 else
   .venv/bin/python .claude/skills/canedge-workspace/scripts/install_tools.py
 fi

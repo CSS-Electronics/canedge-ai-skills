@@ -1,4 +1,5 @@
-"""Download the CSS Electronics MF4 tools (mdf2csv, mdf2parquet_decode) for this OS into their skill's bin/ folder.
+"""Download the CSS Electronics MF4 tools (mdf2csv, mdf2mdf, mdf2parquet_decode) for this OS into their skill's bin/
+folder. A build elsewhere: Set CANEDGE_MDF2CSV / CANEDGE_MDF2MDF / CANEDGE_MDF2PARQUET instead.
 
 Usage (from the repo root; install.bat / install.sh run it):
   .venv\\Scripts\\python.exe .claude/skills/canedge-workspace/scripts/install_tools.py [--force] [--json]

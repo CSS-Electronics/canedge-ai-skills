@@ -6,8 +6,7 @@ them into an AI agent such as [Claude Code](https://www.claude.com/product/claud
 
 - Configure your devices and review or create DBC files
 - Give an instant overview of raw CAN data and explore your S3 bucket
-- Decode MF4 log files to a Parquet data lake and query it (local via DuckDB, Amazon Athena, Google BigQuery or
-  Azure Synapse)
+- Decode MF4 log files to a Parquet data lake and query it (local, Amazon, Google Cloud, Azure supported)
 - Configure and troubleshoot your data lake automation (email alerts, trip summaries, backlog processing)
 - Answer analysis questions as interactive pages (e.g. CAN bus diagnostics)
 - Build, edit and import Grafana dashboards
@@ -18,7 +17,7 @@ The [skills](#the-skills) combine the CANedge Docs, our MF4 tools and Python scr
 
 <br>
 
-**Note:** You can use the full suite as-is or pick the skills you need. You can also use it as inspiration for building your own skills.
+**Note:** Use the full suite as-is, pick the skills you need, or use it as inspiration for your own skills.
 
 ## 1. Set up Claude Code
 
@@ -57,20 +56,13 @@ dependencies and downloads the CSS Electronics MF4 tools. If Python 3.10+ is mis
    - **Windows:** double-click **`install.bat`** (or run `install.bat` in a terminal)
    - **Linux / macOS:** `./install.sh` (or `sh install.sh`)
 
-The installer downloads the CSS Electronics [MF4 converter](https://www.csselectronics.com/pages/mdf4-converters-mf4-asc-csv)
-`mdf2csv` + `mdf2mdf` and [MF4 decoder](https://www.csselectronics.com/pages/mdf4-decoders-dbc-mf4-parquet-csv)
-`mdf2parquet_decode` into the skills' `bin/` folders (pinned versions, MD5-checked). Builds exist for
-Windows x64 and Linux x64/ARM64. macOS: Use a Linux VM/container, or point the skills to a build elsewhere via the
-`CANEDGE_MDF2CSV` / `CANEDGE_MDF2MDF` / `CANEDGE_MDF2PARQUET` environment variables. To reinstall only the tools, run
-`.claude/skills/canedge-workspace/scripts/install_tools.py` with the `.venv` Python (`--force` re-downloads).
-
 
 ## 3. Optional: Connect your S3 bucket / data lake
 
-Ask the agent to "connect my S3 bucket" (or data lake). It opens a setup window where you enter your keys and bucket
-name; it tests them and saves a profile in `credentials/` (gitignored). Never paste keys into the chat. What to enter:
+Ask the agent to "connect my S3 bucket" (or data lake). It opens a setup window for your keys and bucket name; it
+tests them and saves a profile in `credentials/` (gitignored). Never paste keys into the chat. What to enter:
 
-- **AWS data lake:** The 'programmatic access' keys from your CloudFormation stack's 'Outputs' tab + input bucket name
+- **AWS data lake:** The 'programmatic access' keys (CloudFormation 'Outputs' tab) + input bucket name
 - **AWS S3 bucket only:** The 'device' keys (same 'Outputs' tab or your Configuration File) + bucket name
 - **Google Cloud data lake:** The path to your `<id>-programmatic-access-account.json` key file + input bucket name
 - **Azure data lake:** The Synapse connection details you also use for Grafana: Serverless SQL endpoint, database,
@@ -97,20 +89,20 @@ can then import the dashboards it builds into your Grafana and check that every 
 
 > Give me an overview of the raw CAN data in sample-data
 
-> Decode sample-data with the DBC files in sample-data/dbc and show me battery current vs speed during the drive
+> Decode sample-data with the DBCs in sample-data/dbc and show battery current vs speed during the drive
 
 **Your own data:** Point the agent to your log files (SD card copy or any folder), DBC files, Configuration File,
 S3 bucket or data lake, for example:
 
-> Based on this log file, optimize my Configuration File to reduce the file size - but keep all battery related data at full rate
+> Use this log file to optimize my Configuration File for size - but keep all battery data at full rate
 
 > Review my DBC files in D:/dbc for errors - and check if they decode sensibly on my data
 
 > Give me a visual overview of my S3 bucket for the last 30 days
 
-> Check every charge termination across the fleet in my data lake - does current above the charge limit predict the fault?
+> Check all charge terminations in my data lake - does current above the charge limit predict the fault?
 
-> Build a Grafana dashboard for device <ID> with the battery signals from this analysis
+> Build a Grafana dashboard for device 3F7A1C2B with the battery signals from this analysis
 
 > Email me when the battery temperature of any device goes above 45 degC
 
