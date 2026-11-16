@@ -19,6 +19,11 @@ The [skills](#the-skills) combine the CANedge Docs, our MF4 tools and Python scr
 
 **Note:** Use the full suite as-is, pick the skills you need, or use it as inspiration for your own skills.
 
+**Note:** We strongly recommend reading our related article [AI CAN bus data analysis](https://www.csselectronics.com/pages/can-bus-data-analysis-ai-llm-claude) - incl. 10 practical showcases with videos.
+
+[![Watch the CANedge AI skills demo](https://www.csselectronics.com/cdn/shop/files/canedge-ai-skills-demo-v2.png)](https://cdn.shopify.com/videos/c/o/v/a00bad05eaeb4bb99291308fa10c1cd7.mp4)
+
+
 ## 1. Set up Claude Code
 
 The below is our recommended setup for new Claude Code users:
@@ -212,3 +217,5 @@ The MF4 converter/decoder executables that the installer downloads (`bin/` folde
 `canedge-mdf2mdf` and `canedge-mdf2parquet`, not part of the repo) are
 proprietary CSS Electronics software, not covered by the MIT License (see [LICENSE](LICENSE)).
 
+If you use them in your projects, videos or blog posts, we'd appreciate a reference to our article:
+[AI CAN bus data analysis](https://www.csselectronics.com/pages/can-bus-data-analysis-ai-llm-claude).
