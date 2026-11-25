@@ -10,6 +10,7 @@
      o.xRange          [x0, x1] visible range (a small margin is added)
      o.xRangeFn        optional () => [min, max] for the x scale instead (e.g. a zoom shared by several charts)
      o.yMax            fixed y maximum (e.g. shared by a before and an after chart); default: the data maximum
+     o.yAsinh          true = asinh y scale (linear near 0, log-like above): Small counts stay visible next to large ones
      o.fmtX, o.fmtY    legend / axis formatters; o.xIncrs + o.xValues: x axis ticks
      o.totalLabel      adds a legend-only series with the stack total (e.g. "Total")
      o.extra           [{label, stroke, values, scale}] more legend-only series (e.g. a peak on its own scale)
@@ -37,7 +38,7 @@ function stackedBars(el, o) {
   }
   if (o.totalLabel) { series.push({ label: o.totalLabel, stroke: "#434343", paths: none, points: { show: false }, value: val(total) }); data.push(total); }
   const scales = { x: { time: true, range: o.xRangeFn || (() => [x0 - pad, x1 + pad]) },   // small margin: bars at the edges stay fully visible
-    y: { range: (u, mn, mx) => [0, (o.yMax || mx || 1) * 1.05] } };   // o.yMax: same scale across charts
+    y: { range: (u, mn, mx) => [0, (o.yMax || mx || 1) * 1.05], ...(o.yAsinh ? { distr: 4, asinh: 1 } : {}) } };   // o.yMax: same scale across charts
   for (const e of o.extra || []) {
     series.push({ label: e.label, scale: e.scale || "y", stroke: e.stroke, paths: none, points: { show: false }, value: val(e.values) });
     data.push(e.values);
@@ -62,7 +63,8 @@ function stackedBars(el, o) {
   const opts = {
     width: o.width, height: o.height || 200, series, legend: { live: true }, scales,
     axes: [{ stroke: "#6b717b", grid: { stroke: "#e6e9ee" }, incrs: o.xIncrs, values: o.xValues },
-      { stroke: "#6b717b", grid: { stroke: "#e6e9ee" }, size: 56, values: (u, t) => t.map((x) => o.fmtAxisY ? o.fmtAxisY(x) : x) }],
+      { stroke: "#6b717b", grid: { stroke: "#e6e9ee" }, size: 56, values: (u, t) => t.map((x) => (x == null ? "" : o.fmtAxisY ? o.fmtAxisY(x) : x)),   // null = a label uPlot hides
+        ...(o.yAsinh ? { splits: (u, ai, mn, mx) => [0].concat([10, 100, 1e3, 1e4, 1e5, 1e6, 1e7].filter((x) => x <= mx)) } : {}) }],
     cursor: { drag: { x: true, y: false, setScale: false }, sync: { key: o.syncKey || "fps" }, points: { show: false } },
     hooks,
   };

@@ -3,9 +3,9 @@
 Decoder behavior itself (DBC rules, NULLs, transport protocol, output layout, troubleshooting):
 [decoder-technical.md](decoder-technical.md).
 
-## Decoder call (mdf2parquet_decode 25.12.15)
+## Decoder call (mdf2parquet_decode 26.11.23)
 
-- `build_lake.py` runs: `mdf2parquet_decode --non-interactive --verbosity=2 -X --no-concat -O <lake>
+- `build_lake.py` runs: `mdf2parquet_decode --verbosity=2 -X --no-concat -O <lake>
   [--password-file=<abs>] --dbc-can1=<abs> ... -i <files>` with an empty working directory (the decoder would
   otherwise pick up DBC files / `passwords.json` from its cwd). Never `-d`
 - The decoder writes straight into the lake: `<lake>/<device>/<CANx_Message>/<yyyy>/<mm>/<dd>/<session>_<split>.parquet`,
@@ -44,9 +44,9 @@ Decoder behavior itself (DBC rules, NULLs, transport protocol, output layout, tr
 ## Manifest (`<lake>/_manifest.json`)
 
 ```json
-{"schema": "canedge-parquet-manifest/2", "decoder": "25.12.15.a87dc0b4",
+{"schema": "canedge-parquet-manifest/2", "decoder": "26.11.23.affd2584",
  "devices": {"A1B2C3D4": {"dbc_fingerprint": "e3b0...", "dbc_note": "dbc-groups.json group 0",
-             "dbc_files": {"CAN1": ["can1-j1939.dbc"]}, "decoder": "25.12.15.a87dc0b4",
+             "dbc_files": {"CAN1": ["can1-j1939.dbc"]}, "decoder": "26.11.23.affd2584",
              "meta": "Truck 1"}},
  "files": {"C:/.../A1B2C3D4/00000001/00000001.MF4": {"size": 5242880, "mtime": 1729000000.0, "device": "A1B2C3D4",
            "dbc_fingerprint": "e3b0...", "status": "ok", "decoded_utc": "..."}}}

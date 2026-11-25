@@ -23,6 +23,14 @@
     none: "No bar: No bus activity in this time (e.g. the logger was off, the bus was asleep, or those log files " +
       "are not included)",
   };
+  // CAN error frames (mdf2csv --error-frames): Types as the CANedge Docs name them. ACK and BIT concern frames the
+  // CANedge transmits itself (e.g. a transmit list)
+  const ETYPE = { STUFF: "Stuff", FORM: "Form", CRC: "CRC", BIT: "Bit", ACK: "ACK", UNKNOWN: "Unknown" };
+  const ERR_TIP = "CAN error frames recorded by the CANedge, by type (CANedge Docs, CAN errors):\n" +
+    "Stuff = bit-stuffing error, Form = frame format error, CRC = checksum error, Bit = bit level error on a frame the CANedge transmits, " +
+    "ACK = no node acknowledged a frame the CANedge transmits.\nTypical causes: Noise, wiring, termination or a bit-rate mismatch " +
+    "(Stuff, Form, CRC); no other active node on the bus or a wrong bit-rate (ACK).\nError frames are only recorded if " +
+    "enabled in the Configuration File (log > error frames), so 0 can also mean 'not recorded'";
   const { DAY, VI, chCmp, parts, fmt, tzLabel, isoUtc, timeTicks, esc, info, num, r1, fmtH, metaHtml, table } = DASH;
   const TZ = CFG.tz || undefined;
   const IGN = CFG.activity_ignore || [];   // channels left out of the bus activity test (build option), e.g. CAN9
@@ -63,6 +71,7 @@
     return list.length > 1 ? { t, s: t, html: `<span class="fcell" data-tip="${esc(filesTxt(list, 20))}">${esc(t)}</span>` } : t;
   }
   const filesLine = (list) => (list.length ? `Log file${list.length > 1 ? "s" : ""}: ${fileName(list[0])}${list.length > 1 ? ` +${list.length - 1} more` : ""}` : "");
+  const pctTxt = (x) => (x >= 10 ? `${Math.round(x)}%` : x >= 0.1 ? `${x.toFixed(1)}%` : "<0.1%");
   const fmtN = (x) => (x >= 1e9 ? `${num(r1(x / 1e9))} B` : x >= 1e6 ? `${(x / 1e6).toFixed(1)} M` : num(Math.round(x)));
   const mbmin = (x) => (x < 10 ? String(Number(x.toPrecision(2))) : num(Math.round(x)));
   const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
@@ -129,7 +138,43 @@
     META_BY_DEV = {};
     for (const d of devList) { const m = lastMeta(filesOf[d] || []); if (m) META_BY_DEV[DEVS[d]] = m; }
     DASH.setMeta(META_BY_DEV, "The device's meta name (Configuration File general.device.meta) from its latest log file in the selection. Changes: See the Meta tab");
-    return { per, files, trips, ids: idl, devList, filesOf: (d) => filesOf[d] || [], tripsOf: (d) => tripsOf[d] || [], idsOf: (d) => idsOf[d] || [] };
+    return { per, files, trips, ids: idl, devList, filesOf: (d) => filesOf[d] || [], tripsOf: (d) => tripsOf[d] || [], idsOf: (d) => idsOf[d] || [],
+      err: errorView(devs, from, to, trips) };
+  }
+
+  // ------------------------------------------------------------------ CAN error frames in the selection
+  // F.errors: Sparse rows device x bucket x channel x type. Per device: Totals per channel/type, a map bucket -> errors,
+  // and the error periods (buckets with errors joined across gaps <= segment_merge_min, like trips)
+  const typesTxt = (m) => Object.entries(m).sort((a, b) => b[1] - a[1]).map(([t, n]) => `${ETYPE[t] || t} ${num(n)}`).join(", ") || "-";
+  const add1 = (m, k, n) => { m[k] = (m[k] || 0) + n; };
+  function errorView(devs, from, to, trips) {
+    const E = F.errors || { n: [] }, ET = F.error_types || [], per = {};
+    let total = 0;
+    for (let i = 0; i < E.n.length; i++) {
+      const d = E.dev[i], t = E.t[i];
+      if (!devs.has(d) || t < from || t >= to) continue;
+      const c = CH[E.ch[i]], ty = ET[E.ty[i]], n = E.n[i];
+      const p = (per[d] = per[d] || { n: 0, ch: {}, types: {}, bt: new Map(), periods: [] });
+      p.n += n; total += n; add1(p.types, ty, n);
+      const pc = (p.ch[c] = p.ch[c] || { n: 0, types: {}, last: 0 });
+      pc.n += n; add1(pc.types, ty, n); pc.last = Math.max(pc.last, t);
+      let b = p.bt.get(t);
+      if (!b) { b = { n: 0, ch: {}, types: {} }; p.bt.set(t, b); }
+      b.n += n; add1(b.ch, c, n); add1(b.types, ty, n);
+    }
+    const gap = F.segment_merge_min * 60;
+    for (const [d, p] of Object.entries(per)) {
+      let cur = null;
+      for (const t of [...p.bt.keys()].sort((a, b) => a - b)) {
+        const b = p.bt.get(t);
+        if (!cur || t - cur.end > gap) { cur = { dev: +d, start: t, end: t + BS, n: 0, ch: {}, types: {} }; p.periods.push(cur); }
+        cur.end = t + BS; cur.n += b.n;
+        for (const [k, n] of Object.entries(b.ch)) add1(cur.ch, k, n);
+        for (const [k, n] of Object.entries(b.types)) add1(cur.types, k, n);
+      }
+      for (const q of p.periods) q.inTrip = trips.some((i) => F.trips.dev[i] === q.dev && F.trips.start[i] < q.end && F.trips.end[i] > q.start);
+    }
+    return { total, per };
   }
 
   // ------------------------------------------------------------------ KPI groups
@@ -171,7 +216,9 @@ Config CRC32: ${[...crcs].slice(0, 6).join(", ")}${crcs.size > 6 ? " ..." : ""}`
       { title: "Traffic", c: VI.orange, k: [
         { l: "Frames", v: fmtN(frames), n: "all buses" },
         { l: "Avg FPS", v: fps(frames / Math.max(act, 1e-9)), n: "while bus active", tip: "Frames per second across all buses of a device, averaged over the time the bus was active (all devices combined)" },
-        { l: "Peak FPS", v: fps(peak[1]), n: peak[0] || "", ntip: peak[0] ? devTip(DEVS.indexOf(peak[0])) : "", tip: "Highest frames/s of any device in a single minute, all buses" }] },
+        { l: "Peak FPS", v: fps(peak[1]), n: peak[0] || "", ntip: peak[0] ? devTip(DEVS.indexOf(peak[0])) : "", tip: "Highest frames/s of any device in a single minute, all buses" },
+        { l: "CAN errors", v: fmtN(v.err.total), n: !v.err.total ? "none recorded" : ((nd) => `${pctTxt((100 * v.err.total) / Math.max(frames + v.err.total, 1))} of frames, ${nd} device${nd > 1 ? "s" : ""}`)(Object.keys(v.err.per).length),
+          tip: "CAN error frames on all buses (share of all frames incl. errors). Details: Errors tab\n\n" + ERR_TIP }] },
       { title: "Content", c: VI.red, k: [
         { l: "CAN IDs", v: num(nIds), n: `${num(distinct)} distinct`, tip: "IDs counted per device and channel (the same ID on two devices counts twice). Distinct = unique ID values across all devices and channels" },
         { l: "Channels", v: String(chans.length), n: (chans.length <= 3 ? chans.join(", ") : `${chans[0]} ... ${chans[chans.length - 1]}`) +
@@ -261,6 +308,39 @@ Config CRC32: ${[...crcs].slice(0, 6).join(", ")}${crcs.size > 6 ? " ..." : ""}`
       `<div class="ttitle">FPS per channel over time<span class="thint">Drag to zoom, double-click to reset</span>${info(`One chart per device, ${resTxt()} per bar: Stacked average frames/s per channel (while active; busiest channel at the bottom), so the bar height = the total. Hover for each channel, the total, the peak (busiest minute, all channels) and the log file; drag across a chart to zoom the whole dashboard to that period, double-click a chart (or All at the top) to reset` + (plots.length < v.devList.length ? `. Charts for the ${plots.length} devices with most data` : ""))}</div>` +
       plots.map((d) => `<div class="dchart"><div class="dname"><span data-tip="${esc(devTip(d))}">${DEVS[d]}</span></div><div class="uchart" data-dev="${d}"></div><div class="ufile">Log file: -</div></div>`).join("")];
   }
+  function tabErrors(v) {
+    const { total, per } = v.err;
+    if (!total) return [`<div class="cap">No CAN error frames in the selected log files.${info(ERR_TIP)}</div>`];
+    const pct = (n, fr) => (100 * n) / Math.max(fr + n, 1);
+    const rows = [];
+    for (const d of v.devList) {
+      const p = per[d], pd = v.per[d], frAll = Object.values(pd.ch).reduce((s, c) => s + c.a, 0);
+      if (!p) { rows.push([DEVS[d], "Total", 0, 0, 0, "-", "-"]); continue; }
+      const last = Math.max(...Object.values(p.ch).map((c) => c.last));
+      rows.push([DEVS[d], "Total", p.n, pct(p.n, frAll), p.periods.length, typesTxt(p.types), { t: fmt(last + BS), s: last }]);
+      for (const c of Object.keys(p.ch).sort(chCmp)) {
+        const pc = p.ch[c];
+        rows.push({ cls: "sub", cells: ["", chName(d, c), pc.n, pct(pc.n, (pd.ch[c] || { a: 0 }).a), "", typesTxt(pc.types), { t: fmt(pc.last + BS), s: pc.last }] });
+      }
+    }
+    const pers = Object.values(per).flatMap((p) => p.periods);
+    const short = (m, lab) => {   // compact cell: Names by count, the counts on hover
+      const e = Object.entries(m).sort((a, b) => b[1] - a[1]), t = e.map(([k]) => lab(k)).join(", ");
+      return { t, s: t, html: `<span data-tip="${esc(e.map(([k, n]) => `${lab(k)}: ${num(n)}`).join("\n"))}">${esc(t)}</span>` };
+    };
+    const perRows = pers.map((q) => [{ t: fmt(q.start), s: q.start, w: 17 }, { t: DEVS[q.dev], s: DEVS[q.dev], w: 12 }, Math.round((q.end - q.start) / 60), q.n,
+      short(q.ch, (c) => c), short(q.types, (t) => ETYPE[t] || t), q.inTrip ? "Yes" : "No", fileCell(filesIn(q.dev, q.start, q.end))]);
+    const plots = Object.keys(per).map(Number).filter((d) => v.devList.includes(d)).sort((a, b) => per[b].n - per[a].n).slice(0, MAX_PLOTS).sort((a, b) => (DEVS[a] < DEVS[b] ? -1 : 1));
+    return [table({ title: "CAN errors per device and channel", dev: 0, group: true, sortable: false, expand: FPS_ROWS, rows, bars: [2, 3], decimals: { 3: 2 }, barColor: VI.red,
+      titleTip: ERR_TIP, columns: ["Device", "Channel", "Error frames", "Error %", "Periods", "Types", "Last error"],
+      tips: { "Error %": "Error frames as a share of all frames on the channel (data + error frames)", Periods: `Error periods: Times with error frames, joined across gaps of up to ${F.segment_merge_min} min (see the table below)`, Types: "Error frames per type (the i at the table title explains them)", "Last error": "End of the most recent time slot with error frames" } }),
+      `<div class="ttitle">CAN errors over time<span class="thint">Drag to zoom, double-click to reset</span>${info(`One chart per device with error frames, ${resTxt()} per bar: Error frames per channel (stacked; the y axis is compressed like a log scale, so small error counts stay visible next to large ones). Hover for the values, the average FPS (all buses), the error types and the log file; drag across a chart to zoom the whole dashboard to that period` + (plots.length < Object.keys(per).length ? `. Charts for the ${plots.length} devices with most error frames` : ""))}</div>` +
+      plots.map((d) => `<div class="dchart"><div class="dname"><span data-tip="${esc(devTip(d))}">${DEVS[d]}</span></div><div class="uchart echart" data-dev="${d}"></div><div class="ufile">Log file: -</div></div>`).join(""),
+      table({ title: "Error periods", count: true, rows: perRows, bars: [3], sort: [0, 1], barColor: VI.red, search: "Filter by device, channel, type or log file",
+        titleTip: `Times with CAN error frames per device, joined across gaps of up to ${F.segment_merge_min} min, oldest first (time resolution ${resTxt()}). Use them to check what happened before or during e.g. a fault, and to pick log files for a closer look`,
+        columns: ["Start", "Device", "Minutes", "Error frames", "Channels", "Types", "In trip", "Log files"],
+        tips: { Channels: "Channels with error frames, most first (hover for the counts)", Types: "Error types, most first (hover for the counts)", Minutes: `Duration at the dashboard's time resolution (${resTxt()})`, "In trip": "Yes = the period overlaps a trip (bus activity), No = e.g. while parked or at a wake-up", "Log files": "First log file of the period (+ number of further files; hover to list them)" } })];
+  }
   function tabTrips(v) {
     const rows = v.devList.map((d) => {
       const tr = v.tripsOf(d), mins = tr.map((i) => F.trips.min[i]), days = v.per[d].days.size;
@@ -334,6 +414,7 @@ Config CRC32: ${[...crcs].slice(0, 6).join(", ")}${crcs.size > 6 ? " ..." : ""}`
     ["Overview", "Key figures for the selected devices and period", kpis],
     ["Timeline", "When each device recorded data and how active its buses were", tabTimeline],
     ["FPS", "Frames per second (FPS) per device and channel, and over time", tabFps],
+    ["Errors", "CAN error frames per device and channel, over time and as error periods (e.g. to check what happened before a fault). Recorded only if enabled in the Configuration File", tabErrors],
     ["Trips", TRIP_DEF + ". Use the log files of a trip to pick data for decoding", tabTrips],
     ["Storage", "How much each device logs, and which IDs take the space. Shares are estimates (frames x MF4 record weight by data length, as in the CANedge config editor). High-rate or static IDs that are not needed are candidates for filters or prescalers", tabStorage],
     ["Meta", "Device meta names, Configuration Files (CRC32) and firmware per period, from each log file's MF4 header: When was a device renamed, reconfigured or updated", tabMeta],
@@ -347,7 +428,7 @@ Config CRC32: ${[...crcs].slice(0, 6).join(", ")}${crcs.size > 6 ? " ..." : ""}`
   function drawCharts(v) {         // stacked bars: Avg frames/s per channel (active time); height = total
     plots.forEach((p) => p.destroy()); plots = [];
     const width = Math.max(300, document.getElementById("panels").clientWidth - 4);
-    document.querySelectorAll(".uchart").forEach((el) => {
+    document.querySelectorAll(".uchart:not(.echart)").forEach((el) => {
       const d = +el.dataset.dev, fl = el.nextElementSibling, p = v.per[d], all = F.meta[DEVS[d]].channels.filter((c) => p.ch[c]);
       const stack = all.slice().sort((a, b) => p.ch[b].a - p.ch[a].a);   // busiest channel at the bottom
       const xs = p.rows.map((i) => B.t[i]);
@@ -370,6 +451,32 @@ Config CRC32: ${[...crcs].slice(0, 6).join(", ")}${crcs.size > 6 ? " ..." : ""}`
       res.u.over.addEventListener("dblclick", () => ctl.setRange(T0, T1));   // reset the zoom (same as the time strip)
       plots.push(res.u);
     });
+    drawErrCharts(v, width);
+  }
+  function drawErrCharts(v, width) {   // Errors tab: Stacked error frames per channel and bucket (asinh y axis), avg FPS in the legend
+    document.querySelectorAll(".echart").forEach((el) => {
+      const d = +el.dataset.dev, fl = el.nextElementSibling, p = v.per[d], e = v.err.per[d];
+      const chans = Object.keys(e.ch).sort((a, b) => e.ch[b].n - e.ch[a].n);   // most errors at the bottom
+      const order = F.meta[DEVS[d]].channels;
+      const xs = p.rows.map((i) => B.t[i]);
+      const at = p.rows.map((i) => e.bt.get(B.t[i]));
+      const avg = p.rows.map((i) => (B.act[i] ? Math.round(CH.reduce((s, c) => s + B.fr[c].a[i], 0) / B.act[i]) : null));
+      const x0 = Math.max(ctl.state.from, xs[0] ?? ctl.state.from), x1 = Math.min(ctl.state.to, (xs[xs.length - 1] ?? ctl.state.to) + BS);
+      const res = stackedBars(el, {
+        xs, binS: BS, width, height: 180, xRange: [x0, x1], tz: TZ, syncKey: "err", fmtX: (t) => fmt(t), fmtY: num, fmtAxisY: num, yAsinh: true,
+        stacks: chans.map((c) => ({ label: chName(d, c), color: SERIES[Math.max(order.indexOf(c), 0) % SERIES.length], values: at.map((b) => (b && b.ch[c]) || null) })),
+        totalLabel: "Total", extra: [{ label: "Avg FPS", scale: "fps", stroke: "#9aa1ab", values: avg }],
+        xIncrs: XINCRS, xValues: (u, ticks) => {
+          const span = (u.scales.x.max || 0) - (u.scales.x.min || 0);
+          return ticks.map((t, k) => (span > 3 * DAY ? fmt(t, "d") : k === 0 || parts(t).h + parts(t).mi === 0 ? fmt(t, "dhm") : fmt(t, "hm")));
+        },
+        hooks: { setCursor: [(u) => { const i = u.cursor.idx, b = i == null ? null : at[i];
+          fl.textContent = b ? `${typesTxt(b.types)}. ${filesLine(filesIn(d, xs[i], xs[i] + BS))}` : "Log file: -"; }],
+          setSelect: [(u) => { if (u.select.width > 4) { const a = u.posToVal(u.select.left, "x"), b = u.posToVal(u.select.left + u.select.width, "x"); u.setSelect({ left: 0, width: 0 }, false); ctl.setRange(a, b); } }] },
+      });
+      res.u.over.addEventListener("dblclick", () => ctl.setRange(T0, T1));
+      plots.push(res.u);
+    });
   }
 
   // ------------------------------------------------------------------ the dashboard (kit: filter bar, tabs, hash, tooltips)
@@ -380,6 +487,7 @@ Config CRC32: ${[...crcs].slice(0, 6).join(", ")}${crcs.size > 6 ? " ..." : ""}`
       `Time range: ${fmt(s.from)} to ${fmt(s.to)} (${tzLabel(s.from, s.to)})\nUTC: ${isoUtc(s.from)} to ${isoUtc(s.to)}`,
       `Data sources: ${CFG.sources.join(", ")}`, `Log files: ${num(v.files.length)} of ${num(F.files.first.length)}`,
       `Bus activity: ${IGN.length ? `all channels except ${IGN.join(", ")}` : "all channels"}`,
+      "CAN error frames: Only recorded if enabled in the Configuration File",
       `Time resolution: ${resTxt()} (Storage tab: ${F.id_grain_s >= 30 * DAY ? "30 days" : F.id_grain_s >= 7 * DAY ? "weeks" : "days"})`, `Tools: mdf2csv ${CFG.tool}`,
       `Data for follow-up questions: stats.json`, `Generated: ${CFG.generated}`].join("\n");
   }

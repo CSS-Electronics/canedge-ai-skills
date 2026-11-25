@@ -3,7 +3,7 @@
 Reads the canedge-raw-stats/1 files written by raw_stats.py (it never converts log files itself) and
 merges them per device: files, sessions, size, firmware/hardware/config CRC32 changes, recording spans
 + periods without data, bus activity per minute (silent / active) with trips (active periods), per-channel
-totals (frames, frames/s, timeline) and per-ID totals (rate, period, DLC, unique
+totals (frames, frames/s, timeline, CAN error frames + error periods) and per-ID totals (rate, period, DLC, unique
 payloads, storage share, presence). With >1 device it adds a cross-device ID comparison. Schema
 canedge-raw-aggregate/2, fields in references/raw-stats.md.
 
@@ -135,7 +135,7 @@ def load_stats(files: list[Path]) -> list[dict]:
         except (OSError, ValueError):
             print(f"WARNING: Unreadable stats file {p}", file=sys.stderr)
             continue
-        if d.get("schema") == "canedge-raw-stats/1" and d.get("frames_total"):
+        if d.get("schema") == "canedge-raw-stats/1" and (d.get("frames_total") or d.get("error_frames_total")):
             d["_stats_path"] = str(p)
             out.append(d)
     return out
@@ -244,6 +244,7 @@ def device_model(stats: list[dict], o: argparse.Namespace) -> dict:
     # ---- frames per minute per channel (aligned to the recording minutes)
     chans = sorted({c for s in stats for c in s["channels"]}, key=ch_key)
     fr = {ch: np.zeros(len(minutes)) for ch in chans}
+    er: dict = {}  # channel -> error type -> error frames per minute (only channels/types with errors)
     for s in stats:
         for ch, c in s["channels"].items():
             if not c.get("bins") or not len(minutes):
@@ -253,6 +254,8 @@ def device_model(stats: list[dict], o: argparse.Namespace) -> dict:
             k = np.clip(np.searchsorted(minutes, m), 0, len(minutes) - 1)
             ok = minutes[k] == m
             np.add.at(fr[ch], k[ok], b[ok])
+            for typ, eb in (c["bins"].get("errors") or {}).items():   # CAN error frames per minute, channel and type
+                np.add.at(er.setdefault(ch, {}).setdefault(typ, np.zeros(len(minutes))), k[ok], np.asarray(eb, dtype=float)[ok])
 
     # ---- minute states: silent (recording, no frames on any bus) / active. Averages use active time only
     bus = sum((fr[ch] for ch in chans), np.zeros(len(minutes)))  # all channels (incl. CAN9 GNSS/IMU)
@@ -283,7 +286,7 @@ def device_model(stats: list[dict], o: argparse.Namespace) -> dict:
                          "fps_mean": rnd(bus[sl].sum() / max(cov[sl].sum(), 1e-9)), "files": files[:10],
                          **({"files_more": len(files) - 10} if len(files) > 10 else {})})
     return {"stats": stats, "rec_iv": rec_iv, "minutes": minutes, "cov": cov, "chans": chans, "fr": fr, "bus": bus,
-            "rate": rate, "act": act, "per_min": per_min, "code": code, "segments": segments}
+            "rate": rate, "act": act, "per_min": per_min, "code": code, "segments": segments, "er": er}
 
 
 def router_info(stats: list[dict]) -> dict:
@@ -303,8 +306,56 @@ def router_info(stats: list[dict]) -> dict:
     return out
 
 
+def error_summary(m: dict, o: argparse.Namespace) -> dict:
+    """CAN error frames of one device (device_model): Totals per channel + type, the busiest minute and the error
+    periods (minutes with error frames, joined across gaps <= --segment-merge-min, like trips), each with its
+    channels, types, whether it overlaps a trip and its log files. Only recorded if error frame logging is enabled in
+    the Configuration File, so 0 can also mean 'not recorded'."""
+    er, minutes, fr = m["er"], m["minutes"], m["fr"]
+    if not er:
+        return {"frames": 0}
+    per_min = sum((a for t in er.values() for a in t.values()), np.zeros(len(minutes)))
+    frames = sum(float(f.sum()) for f in fr.values())
+    tot = int(per_min.sum())
+    by_type: dict = defaultdict(int)
+    for t in er.values():
+        for typ, a in t.items():
+            by_type[typ] += int(a.sum())
+    idx = np.nonzero(per_min)[0].tolist()
+    groups: list[list[int]] = []
+    for i in idx:
+        if groups and minutes[i] - minutes[groups[-1][-1]] <= o.segment_merge_min + 1:
+            groups[-1].append(i)
+        else:
+            groups.append([i])
+    trips = [(ts(g["start_utc"]), ts(g["end_utc"])) for g in m["segments"]]
+    file_spans = [(ts(s["time"]["first_utc"]), ts(s["time"]["last_utc"]), file_name(s["file"])) for s in m["stats"]]
+    periods = []
+    for g in groups:
+        t0, t1 = float(minutes[g[0]] * 60), float(minutes[g[-1]] * 60 + 60)
+        sel = np.array(g)
+        chans = {ch: int(sum(a[sel].sum() for a in t.values())) for ch, t in er.items()}
+        types: dict = defaultdict(int)
+        for t in er.values():
+            for typ, a in t.items():
+                types[typ] += int(a[sel].sum())
+        files = [f for a, b, f in file_spans if a < t1 and b >= t0]
+        periods.append({"start_utc": iso(t0), "end_utc": iso(t1), "minutes": int(minutes[g[-1]] - minutes[g[0]] + 1),
+                        "error_frames": int(per_min[sel].sum()), "max_per_min": int(per_min[sel].max()),
+                        "channels": {k: v for k, v in sorted(chans.items(), key=lambda kv: ch_key(kv[0])) if v},
+                        "types": dict(sorted((k, v) for k, v in types.items() if v)),
+                        "in_trip": any(a < t1 and b > t0 for a, b in trips), "files": files[:10],
+                        **({"files_more": len(files) - 10} if len(files) > 10 else {})})
+    k = int(np.argmax(per_min))
+    return {"frames": tot, "pct_of_frames": rnd(100 * tot / max(frames + tot, 1)), "by_type": dict(sorted(by_type.items())),
+            "first_utc": iso(minutes[idx[0]] * 60), "last_utc": iso(minutes[idx[-1]] * 60 + 60),
+            "minutes_with_errors": len(idx), "busiest_minute": {"utc": iso(minutes[k] * 60), "error_frames": int(per_min[k])},
+            "periods_total": len(periods), "periods": periods[: o.max_spans]}
+
+
 def aggregate_device(dev: str, stats: list[dict], o: argparse.Namespace) -> tuple[dict, dict]:
     m = device_model(stats, o)
+    er, errors = m["er"], error_summary(m, o)  # CAN error frames (m is reused as a loop variable below)
     stats, rec_iv, minutes, cov, chans, fr, bus, rate, act, per_min, code, segments = (
         m[k] for k in ("stats", "rec_iv", "minutes", "cov", "chans", "fr", "bus", "rate", "act", "per_min", "code",
                        "segments"))
@@ -349,7 +400,7 @@ def aggregate_device(dev: str, stats: list[dict], o: argparse.Namespace) -> tupl
             break_before.append(len(groups))
         groups += [blk[i:i + chunk] for i in range(0, len(blk), chunk)]
 
-    channels, activity, peaks = {}, {}, {}
+    channels, activity, peaks, err_tl = {}, {}, {}, {}
     router = router_info(stats)
     for ch in chans:
         frames = tx = 0
@@ -366,6 +417,12 @@ def aggregate_device(dev: str, stats: list[dict], o: argparse.Namespace) -> tupl
                     maxload.append(c.get("busload_max_pct", c["busload_mean_pct"]))
             ids |= {i["id"] for i in s["ids"] if i["channel"] == ch}
         e = {"bitrates": sorted(bitrates), "frames": frames, "unique_ids": len(ids)}
+        if er.get(ch):   # CAN error frames (0 = none recorded; logging them is a Configuration File setting)
+            n_err = int(sum(a.sum() for a in er[ch].values()))
+            e.update(error_frames=n_err, error_pct=rnd(100 * n_err / max(frames + n_err, 1)),
+                     error_types={t: int(a.sum()) for t, a in sorted(er[ch].items())})
+        else:
+            e["error_frames"] = 0
         if router.get("labels", {}).get(ch):
             e["label"] = router["labels"][ch]  # CANmod.router channel (demuxed); no bit-rate in the MF4 header
         if tx:
@@ -377,6 +434,8 @@ def aggregate_device(dev: str, stats: list[dict], o: argparse.Namespace) -> tupl
             e["busload_max_pct"] = rnd(max(maxload))
         channels[ch] = e
         activity[ch] = [rnd(fr[ch][g].sum() / max(cov[g].sum(), 1.0)) for g in groups]
+        if er.get(ch):  # error frames per point (sum)
+            err_tl[ch] = [int(sum(a[g].sum() for a in er[ch].values())) for g in groups]
         # busiest minute per point (= the average when a point is one minute), so short peaks stay visible
         p_ch = per_min(fr[ch])
         peaks[ch] = [rnd(float(p_ch[g].max())) if len(p_ch[g]) else None for g in groups]
@@ -450,7 +509,8 @@ def aggregate_device(dev: str, stats: list[dict], o: argparse.Namespace) -> tupl
         "channels": channels,
         "fps_timeline": {"axis": "recorded time (periods without data removed)", "minutes_per_point": chunk,
                          "t_utc": [iso(minutes[g[0]] * 60) for g in groups], "break_before": break_before,
-                         "fps": activity, "fps_peak": peaks},
+                         "fps": activity, "fps_peak": peaks, **({"error_frames": err_tl} if err_tl else {})},
+        "errors": errors,
         "ids": {"total": len(rows), "listed": len(top),
                 "omitted": {"ids": len(rest), "frames": sum(r["frames"] for r in rest),
                             "est_storage_pct": rnd(sum(r["est_storage_pct"] or 0 for r in rest))},
@@ -512,6 +572,7 @@ def aggregate(stats: list[dict], o: argparse.Namespace, inputs: list[str], missi
             "logged_h": rnd(sum(d["logged_h"] for d in devices.values())),
             "active_h": rnd(sum(d["active_h"] for d in devices.values())),
             "frames": sum(d["frames"] for d in devices.values()),
+            "error_frames": sum(d["errors"]["frames"] for d in devices.values()),
             "no_data_periods": sum(d["recording"]["no_data_total"] for d in devices.values()),
             "unique_ids": len({i for v in dev_ids.values() for i in v}),
         }

@@ -1,7 +1,8 @@
 """Compute per-file raw CAN/LIN statistics for CANedge log files with the CSS mdf2csv converter.
 
 For each log file (MF4/MFC/MFE/MFM): Convert to a temporary CSV with mdf2csv (one file at a time),
-compute frames, IDs, periods, payload variety, bus load per 60 s bin etc., write the result to
+compute frames, IDs, periods, payload variety, bus load and CAN error frames (mdf2csv --error-frames; only recorded
+if enabled in the Configuration File) per 60 s bin etc., write the result to
 data/raw-stats/<DEVICE>/<SESSION>/<SPLIT>.json (schema canedge-raw-stats/1, see
 references/raw-stats.md) and delete the temporary CSV immediately. Input files are never modified.
 
@@ -91,6 +92,8 @@ def is_cached(meta: dict, root: Path = STATS_ROOT) -> bool:
     f, ids = d.get("file", {}), d.get("ids") or []
     if ids and "payload_changes" not in ids[0]:
         return False  # stats from before payload_changes (static ID basis): recompute
+    if "error_frames_total" not in d:
+        return False  # stats from before CAN error frames were read (mdf2csv --error-frames): recompute
     if (d.get("demux") or {}).get("muxtp", "") != muxtp.key(meta.get("muxtp") or []):
         return False  # demuxed vs not demuxed (or another mapping): recompute, never mix
     return f.get("size_bytes") == meta["size_bytes"] and abs(float(f.get("mtime", -1)) - meta["mtime"]) < 1e-2
@@ -170,6 +173,10 @@ def table_to_df(t: pa.Table, lin: bool) -> pd.DataFrame:
     })
 
 
+NO_FRAMES = pd.DataFrame({k: np.zeros(0, dtype=t) for k, t in (("ts", float), ("ch", str), ("ide", np.int8), ("id", np.int64),
+                         ("dlc", np.int16), ("n", np.int16), ("edl", np.int8), ("brs", np.int8), ("payload", np.int64), ("dir", np.int8))})
+
+
 def display_id(s: str) -> str:
     """A cached ID string as shown to people (canedge-workspace fmt_can_id): 11-bit 0x0123 -> 0x123, 29-bit + LIN as is.
     The cache keeps its own format (id_str)."""
@@ -182,8 +189,13 @@ def id_str(ch: str, ide: int, ident: int) -> str:
     return f"0x{ident:08X}" if ide else f"0x{ident:04X}"
 
 
-def compute_stats(df: pd.DataFrame, meta: dict, data_rate: float) -> dict:
-    t0, t1 = float(df["ts"].min()), float(df["ts"].max())
+def compute_stats(df: pd.DataFrame, meta: dict, data_rate: float, err: pd.DataFrame | None = None) -> dict:
+    """Per-file stats from the data frames (df, table_to_df) and the CAN error frames (err: ts, ch, type). A file can
+    hold only error frames (e.g. a wrong bit-rate): Its channels then have frames 0."""
+    if err is None:
+        err = pd.DataFrame({"ts": np.zeros(0), "ch": np.zeros(0, dtype=str), "type": np.zeros(0, dtype=str)})
+    t0 = float(min(x.min() for x in (df["ts"], err["ts"]) if len(x)))
+    t1 = float(max(x.max() for x in (df["ts"], err["ts"]) if len(x)))
     origin = np.floor(t0 / BIN_S) * BIN_S
     nbins = int((t1 - origin) // BIN_S) + 1
     bins_ok = nbins <= MAX_BINS
@@ -193,38 +205,47 @@ def compute_stats(df: pd.DataFrame, meta: dict, data_rate: float) -> dict:
         covered = np.clip(np.minimum(starts + BIN_S, t1) - np.maximum(starts, t0), 0, BIN_S)
         if t1 == t0:
             covered[:] = 1.0
+    bin_of = lambda x: ((x["ts"].to_numpy() - origin) // BIN_S).astype(np.int64)  # noqa: E731
+    data_ch = dict(tuple(df.groupby("ch", sort=True))) if len(df) else {}
+    err_ch = dict(tuple(err.groupby("ch", sort=True))) if len(err) else {}
     channels: dict = {}
-    for ch, g in df.groupby("ch", sort=True):
-        c = {"frames": int(len(g)), "unique_ids": int(g[["ide", "id"]].drop_duplicates().shape[0]),
-             "error_frames": None}
-        tx = int(g["dir"].sum()) if "dir" in g else 0
+    for ch in sorted(set(data_ch) | set(err_ch)):
+        g, e = data_ch.get(ch), err_ch.get(ch)
+        c = {"frames": 0 if g is None else int(len(g)),
+             "unique_ids": 0 if g is None else int(g[["ide", "id"]].drop_duplicates().shape[0]),
+             "error_frames": 0 if e is None else int(len(e))}
+        if e is not None:
+            c["error_types"] = {str(t): int(n) for t, n in e["type"].value_counts().sort_index().items()}
+        tx = int(g["dir"].sum()) if g is not None and "dir" in g else 0
         if tx:
             c["tx_frames"] = tx
         rate = meta["bitrates"].get(ch) if ch.startswith("CAN") else None
         busy = None
-        if rate:
+        if rate and g is not None:
             busy = frame_bus_time(g["ide"].to_numpy(), g["edl"].to_numpy(), g["brs"].to_numpy(), g["n"].to_numpy(),
                                   rate, data_rate)
             dur = max(t1 - t0, 1e-3)
             c["busload_mean_pct"] = r1(100 * busy.sum() / dur)
         if bins_ok:
-            idx = ((g["ts"].to_numpy() - origin) // BIN_S).astype(np.int64)
-            frames = np.bincount(idx, minlength=nbins)
-            b = {"start_utc": iso(origin), "frames": frames.tolist()}
+            b = {"start_utc": iso(origin)}
+            b["frames"] = (np.zeros(nbins, dtype=np.int64) if g is None else np.bincount(bin_of(g), minlength=nbins)).tolist()
             if busy is not None:
-                load = 100 * np.bincount(idx, weights=busy, minlength=nbins) / np.maximum(covered, 1.0)
+                load = 100 * np.bincount(bin_of(g), weights=busy, minlength=nbins) / np.maximum(covered, 1.0)
                 b["busload_pct"] = [r1(x) for x in load]
                 c["busload_max_pct"] = r1(load.max())  # same bins as the mean (coverage floored at 1 s)
+            if e is not None:  # error frames per 60 s bin and type
+                b["errors"] = {str(t): np.bincount(bin_of(x), minlength=nbins).tolist() for t, x in e.groupby("type")}
             c["bins"] = b
         elif busy is not None:
             c["busload_max_pct"] = c["busload_mean_pct"]
-        if busy is not None:
-            # keep schema key order: frames, unique_ids, error_frames, busload_mean_pct, busload_max_pct, bins
-            c = {k: c[k] for k in ("frames", "unique_ids", "error_frames", "tx_frames", "busload_mean_pct",
-                                   "busload_max_pct", "bins") if k in c}
-        channels[ch] = c
+        channels[ch] = {k: c[k] for k in ("frames", "unique_ids", "error_frames", "error_types", "tx_frames",
+                                          "busload_mean_pct", "busload_max_pct", "bins") if k in c}
 
     # ---- per ID
+    if not len(df):
+        return {"time": {"first_utc": iso(t0), "last_utc": iso(t1), "duration_s": round(t1 - t0, 3)},
+                "frames_total": 0, "error_frames_total": int(len(err)), "bin_s": BIN_S, "channels": channels, "ids": [],
+                **({} if bins_ok else {"warnings": [f"Timestamp span {t1 - t0:.0f} s too large for 60 s bins - bins omitted"]})}
     df = df.sort_values(["ch", "ide", "id", "ts"], kind="mergesort").reset_index(drop=True)
     key = df["ch"].astype(str) + "|" + df["ide"].astype(str) + "|" + df["id"].astype(str)
     gid, uniq = pd.factorize(key, sort=False)
@@ -257,7 +278,8 @@ def compute_stats(df: pd.DataFrame, meta: dict, data_rate: float) -> dict:
         ids.append(e)
     ids.sort(key=lambda e: -e["est_storage_bytes"])
     return {"time": {"first_utc": iso(t0), "last_utc": iso(t1), "duration_s": round(t1 - t0, 3)},
-            "frames_total": int(len(df)), "bin_s": BIN_S, "channels": channels, "ids": ids,
+            "frames_total": int(len(df)), "error_frames_total": int(len(err)), "bin_s": BIN_S, "channels": channels,
+            "ids": ids,
             **({} if bins_ok else {"warnings": [f"Timestamp span {t1 - t0:.0f} s too large for 60 s bins - bins omitted"]})}
 
 
@@ -271,22 +293,27 @@ def process_one(meta: dict, tool: str, tmp_root: str, version: str, data_rate: f
         try:
             mx = meta.get("muxtp") or []
             tables = mdf2csv_tables(meta["path"], Path(tool), passwords, tmp_root,  # temp CSVs deleted at once
-                                    muxtp=mx, mdf2mdf=Path(mdf2mdf) if mx and mdf2mdf else None)
+                                    muxtp=mx, mdf2mdf=Path(mdf2mdf) if mx and mdf2mdf else None, error_frames=True)
         except RuntimeError as e:
             res["error"] = str(e)
             return res
-        frames = []
+        frames, errs = [], []
         for bus, t in tables:
             lin = bus == "LIN"
-            if t.num_rows:
+            if bus == "CAN_ERR":
+                if t.num_rows:
+                    errs.append(pd.DataFrame({"ts": t["TimestampEpoch"].to_numpy(),
+                                              "ch": np.char.add("CAN", t["BusChannel"].to_numpy().astype(str)),
+                                              "type": t["ErrorType"].to_numpy(zero_copy_only=False).astype(str)}))
+            elif t.num_rows:
                 df = table_to_df(t, lin)
                 df["dir"] = t["Dir"].to_numpy().astype(np.int8)
                 frames.append(df)
-        if not frames:
+        if not frames and not errs:
             res["error"] = "no frames in file"
             return res
-        df = pd.concat(frames, ignore_index=True)
-        st = compute_stats(df, meta, data_rate)
+        df = pd.concat(frames, ignore_index=True) if frames else NO_FRAMES  # error frames only (e.g. wrong bit-rate)
+        st = compute_stats(df, meta, data_rate, pd.concat(errs, ignore_index=True) if errs else None)
         fmeta = {k: meta[k] for k in ("path", "size_bytes", "mtime", "device", "session", "split", "format",
                                        *HEADER_KEYS, "bitrates")}
         for k in ("path_device", "header_serial"):
@@ -307,7 +334,7 @@ def process_one(meta: dict, tool: str, tmp_root: str, version: str, data_rate: f
         op.parent.mkdir(parents=True, exist_ok=True)
         op.write_text(json.dumps(out, separators=(",", ":")), encoding="utf-8")
         loads = [f"{ch} {c['busload_mean_pct']}%" for ch, c in st["channels"].items() if "busload_mean_pct" in c]
-        res.update(frames=st["frames_total"], ids=len(st["ids"]), loads=loads, duration_s=st["time"]["duration_s"],
+        res.update(frames=st["frames_total"], errors=st["error_frames_total"], ids=len(st["ids"]), loads=loads, duration_s=st["time"]["duration_s"],
                    stats=str(op), warnings=st.get("warnings", []))
         return res
     except Exception as e:  # noqa: BLE001 - report and continue with the next file
@@ -490,7 +517,8 @@ def main() -> int:
             print(f"[{i}/{len(todo)}] {tag} FAILED: {r['error']}")
         else:
             print(f"[{i}/{len(todo)}] {tag} {r['size_bytes'] / 1e6:.1f} MB -> {r['frames']:,} frames, {r['ids']} IDs, "
-                  f"{r['duration_s'] / 60:.1f} min" + (f", load {', '.join(r['loads'])}" if r["loads"] else "")
+                  + (f"{r['errors']:,} CAN error frames, " if r["errors"] else "")
+                  + f"{r['duration_s'] / 60:.1f} min" + (f", load {', '.join(r['loads'])}" if r["loads"] else "")
                   + f" ({r['seconds']} s)")
             for w in r.get("warnings", []):
                 print(f"    WARNING: {w}")

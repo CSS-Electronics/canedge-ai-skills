@@ -2,10 +2,10 @@
 name: canedge-raw-overview
 description: >
   Overview of RAW CAN/LIN data across a folder of CANedge log files (100s of files, many devices) as an
-  interactive single-file dashboard, no DBC needed: Bus activity, trips, frames/s, IDs + storage share, meta
-  names + config history. Use for "give me an overview of my raw data / log files", "what's on my CAN bus",
-  "which CAN IDs are in this data", "when was the bus active", "compare device A vs B". DBC decoding:
-  canedge-mdf2parquet.
+  interactive single-file dashboard, no DBC needed: Bus activity, trips, frames/s, CAN error frames, IDs + storage
+  share, meta names + config history. Use for "give me an overview of my raw data / log files", "what's on my CAN
+  bus", "which CAN IDs are in this data", "when was the bus active", "are there CAN errors", "compare device A vs B".
+  DBC decoding: canedge-mdf2parquet.
 ---
 
 # canedge-raw-overview
@@ -24,8 +24,8 @@ Run from the repo root with `.venv\Scripts\python.exe` (Linux: `.venv/bin/python
 
 | Script | Use it for |
 |---|---|
-| `scripts/raw_stats.py <paths> \| --project <p>` | Header step for every file (serial, session, split, firmware, config CRC32, meta name from the MF4 header; MFC/MFE/MFM: from a finalized copy of one file per session, conventions section 8), then convert each file with mdf2csv (temp CSV deleted at once), write `data/raw-stats/<DEVICE>/<SESSION>/<SPLIT>.json`. Cached by size + mtime (header fields refreshed without re-conversion). Size guard, `--sample N`, `--workers N` (default up to 4 files in parallel, ~2.3x; `1` = one at a time). CANmod.router: With `--project`, devices whose DBCs include the router DBC are demuxed first (mdf2mdf; CAN11-14 = S1-S4, cached per mapping); `--muxtp 010:11` without a project; un-demuxed router data is flagged |
-| `scripts/raw_aggregate.py <paths> \| --device ID \| --project <p>` | Merge cached stats into `stats.json` (per device: Recording time, bus activity per minute (active / silent) + trips (active periods), FW/config changes, frames/s per channel, top IDs, static candidates, cross-device comparison). Filters: `--start/--end`, `--top`, `--gap-h`, `--trip-min-min` (3), `--activity-ignore CAN9` |
+| `scripts/raw_stats.py <paths> \| --project <p>` | Header step for every file (serial, session, split, firmware, config CRC32, meta name from the MF4 header; MFC/MFE/MFM: from a finalized copy of one file per session, conventions section 8), then convert each file with mdf2csv incl. CAN error frames (temp CSV deleted at once), write `data/raw-stats/<DEVICE>/<SESSION>/<SPLIT>.json`. Cached by size + mtime (header fields refreshed without re-conversion). Size guard, `--sample N`, `--workers N` (default up to 4 files in parallel, ~2.3x; `1` = one at a time). CANmod.router: With `--project`, devices whose DBCs include the router DBC are demuxed first (mdf2mdf; CAN11-14 = S1-S4, cached per mapping); `--muxtp 010:11` without a project; un-demuxed router data is flagged |
+| `scripts/raw_aggregate.py <paths> \| --device ID \| --project <p>` | Merge cached stats into `stats.json` (per device: Recording time, bus activity per minute (active / silent) + trips (active periods), FW/config changes, frames/s per channel, CAN error frames + error periods, top IDs, static candidates, cross-device comparison). Filters: `--start/--end`, `--top`, `--gap-h`, `--trip-min-min` (3), `--activity-ignore CAN9` |
 | `scripts/build_dashboard.py <same selectors> [--tz <IANA>]` | Writes `stats.json` + `report.html`: ONE self-contained file (data, app, uPlot inlined; works offline, can be emailed). The user filters devices and the time range in the browser; nothing is re-processed |
 | `scripts/facts.py` | (library) The dashboard facts: Additive per-device time buckets (1 min .. 1 day, size-budgeted), trips, files, IDs per day - from the same per-minute model as `stats.json` |
 
@@ -54,12 +54,17 @@ Field definitions, activity states, bus-load formula and storage estimate: [refe
    trips (active periods) with their log files - use them to pick files for decoding). For another cut,
    re-run `raw_aggregate.py` with filters (`--device`, `--start/--end`, `--top 200`) - never re-process
    the log files for this
+6. CAN errors ("are there bus errors", "did errors increase before the fault at <time>"): `devices.<ID>.errors`
+   (totals, types, `periods` with channels, types, `in_trip` and log files) and `channels.<ch>.error_frames` /
+   `error_pct`. Minute counts per type: The per-file stats (`bins.errors`). Compare the error periods with the time
+   of the fault and with the trips; 0 errors only means none recorded if error frame logging is enabled
+   (Configuration File `log.error_frames`; check the config with canedge-config if unsure)
 
 ## Output layers
 
 - **Human**: `report.html`, an interactive dashboard: Device multi-select + time-range brush / date inputs
-  at the top; six tabs: Overview (default: four KPI groups, scope / activity / traffic / content), Timeline,
-  FPS, Trips, Storage, Meta (configuration history: meta name / config CRC32 / firmware periods and changes)
+  at the top; seven tabs: Overview (default: four KPI groups, scope / activity / traffic incl. CAN errors / content),
+  Timeline, FPS, Errors (CAN error frames per device + channel, a chart per device, error periods), Trips, Storage, Meta (configuration history: meta name / config CRC32 / firmware periods and changes)
   (each starting with a per-device table; a Meta column shows each device's latest meta name, if any; tables sort by column, page 20 rows with
   Prev/Next/Show all, the Trips and IDs tables have a search box, IDs an 'Only static IDs' toggle), all recomputed in the browser for the selection. Charts:
   uPlot (zoom by dragging = sets the period). PDF = the browser's Print / Save as PDF of the current view.
@@ -81,7 +86,11 @@ Field definitions, activity states, bus-load formula and storage estimate: [refe
 - Never load CSV rows into the conversation; only the scripts touch frames
 - Respect the size guard: No `--yes` without the user's OK for > 1 GB
 - Talk in frames/s (FPS), not bus load: FPS is counted, bus load is an estimate (kept in stats.json for
-  users who ask). Storage share is an estimate too; error frames are not counted (not exported by mdf2csv)
+  users who ask). Storage share is an estimate too; error frames are not counted in it
+- CAN error frames are only in the log files if error frame logging is enabled in the Configuration File: "No CAN
+  error frames" can also mean "not recorded". ACK/Bit errors concern frames the CANedge transmits itself (e.g. a
+  transmit list; ACK = no other node acknowledged them). Error-only files (e.g. a wrong bit-rate) are kept: Their
+  channels show 0 frames and the errors. Errors do not count as bus activity (trips)
 - Bus activity (active = frames on a bus) says nothing about why: Confirm with a decoded signal before
   calling a trip a "drive" (it can be a wake-up, charging, a diagnostic session). Periods without log data
   are not "gaps": The data cannot tell why nothing was recorded

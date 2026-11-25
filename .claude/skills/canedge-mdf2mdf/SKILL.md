@@ -17,7 +17,7 @@ decrypts and finalizes log files. Never use other tools (asammdf, custom parsers
 
 | Platform | Location |
 |---|---|
-| Windows x64, Linux x64 / ARM64 | `.claude/skills/canedge-mdf2mdf/bin/mdf2mdf[.exe]` (24.12.19), downloaded by `install.bat` / `install.sh` (`canedge-workspace/scripts/install_tools.py`) |
+| Windows x64, Linux x64 / ARM64 | `.claude/skills/canedge-mdf2mdf/bin/mdf2mdf[.exe]` (26.11.23), downloaded by `install.bat` / `install.sh` (`canedge-workspace/scripts/install_tools.py`) |
 | macOS / other | No build: Use a Linux VM/container, or set `CANEDGE_MDF2MDF=<path>` / `--tool` |
 
 Docs: https://canlogger.csselectronics.com/tools-docs/converters_mf4/converters/mdf/index.html
@@ -62,24 +62,24 @@ simulation or decoding. Write files only when the user wants them, e.g. for asam
 ## mdf2mdf CLI (direct use)
 
 ```
-mdf2mdf.exe --non-interactive -O <out-folder> --muxtp-can2=010#11:12:13:14 <file.MF4>
-mdf2mdf.exe --non-interactive -O <out-folder> --muxtp-can2=010#11:12:13:14 --muxtp-can2=012#15:16:17:18 <file.MF4>
-mdf2mdf.exe --non-interactive -O <out-folder> -p passwords.json <file.MFE>
+mdf2mdf.exe -O <out-folder> --muxtp-can2=010#11:12:13:14 <file.MF4>
+mdf2mdf.exe -O <out-folder> --muxtp-can2=010#11:12:13:14 --muxtp-can2=012#15:16:17:18 <file.MF4>
+mdf2mdf.exe -O <out-folder> -p passwords.json <file.MFE>
 ```
 
 | Option | Meaning |
 |---|---|
-| `--muxtp-can<N>=<ID>#<S1>:<S2>:<S3>:<S4>` | Demux tunnel frames on channel N, ID hex (3 digits 11-bit, 8 digits 29-bit), into channels S1-S4 (decimal; not N). Repeat for several tunnel IDs |
-| `-O, --output-directory` | Output folder: Always set it, outside the user's log folders. Output file: `<stem>_out.MF4` |
+| `--muxtp-can<N>=<ID>#<S1>:<S2>:<S3>:<S4>` | Demux tunnel frames on channel N, ID hex (3 digits 11-bit, 8 digits 29-bit), into channels S1-S4 (decimal 1-255; not N). Repeat for several tunnel IDs. Invalid values are an error. All frames with that ID on N are treated as MUX-TP |
+| `-O, --output-directory` | Output folder (must exist): Always set it, outside the user's log folders. Output file: `<stem>_out.MF4` |
 | `-p, --password-file` | Passwords for encrypted files (`{"default": "...", "AABBCCDD": "..."}`) |
-| `-i`, `-X`, `-b`, `--verbosity`, `--non-interactive`, `-v` | As for mdf2csv (`canedge-mdf2csv`) |
+| `-i`, `-X`, `--verbosity`, `-v` | As for mdf2csv (`canedge-mdf2csv`) |
 | `-d, --delete-converted` | **Never use**: Deletes the input log files |
 
 ## MF4 header of MFC/MFE/MFM files
 
 The header (serial, firmware, config CRC32, meta name, bit-rates) of compressed/encrypted files is only readable
 after finalizing. The scripts do this themselves (canedge-workspace `mf4_files.fill_headers()`: one file per
-device/session); the whole file is needed (MFC carries a file checksum). mdf2mdf 24.12.19 drops the LIN bit-rates.
+device/session); the whole file is needed (MFC carries a file checksum). mdf2mdf (24.12.19-26.11.23) drops the LIN bit-rates.
 
 ## Rules
 

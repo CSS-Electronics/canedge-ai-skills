@@ -1,7 +1,7 @@
 # MF4 decoder (mdf2parquet_decode) - technical reference
 
 AI-friendly summary of the CSS Electronics MF4 decoder docs + the decoder troubleshooting guide in the CANedge Intro
-(checked against the docs for version 25.12.15). Use it to explain why a signal does not decode, why the lake looks
+(checked against the docs for version 26.11.23). Use it to explain why a signal does not decode, why the lake looks
 the way it does (folders, schema, NULLs, file counts) and how multi-frame messages are handled. How `build_lake.py`
 calls the decoder: [lake-details.md](lake-details.md).
 
@@ -25,7 +25,7 @@ calls the decoder: [lake-details.md](lake-details.md).
 ## 2. Command line
 
 ```text
-mdf2parquet_decode [--verbosity=<0-4>] [--non-interactive] [-X] [-b <bytes>] [-p <passwords.json>]
+mdf2parquet_decode [--verbosity=<0-4>] [-X] [-p <passwords.json>]
                    [--concat | --no-concat] [--pgn-src-merge | --no-pgn-src-merge] [--pgn-dst-merge | --no-pgn-dst-merge]
                    [--dbdump] [--dbc-can<N>=<file>]... [--dbc-lin<N>=<file>]... [-O <output dir>] [-i <files/folders>]
 ```
@@ -34,7 +34,7 @@ mdf2parquet_decode [--verbosity=<0-4>] [--non-interactive] [-X] [-b <bytes>] [-p
 |---|---|
 | `--dbc-can<N>=` / `--dbc-lin<N>=` | DBC for CAN/LIN channel N; repeat for several DBCs on one channel (the same ID in several DBCs only with different message names, section 4). Channel 9 = internal GNSS/IMU of CANedge GNSS variants; 11-14 (15-18, ...) = CANmod.router S1-S4 after MUX-TP demux (section 5) |
 | (no `--dbc-*`) | Auto-discovery in the working directory: Files matching `^(can\|lin)(\d+)-(\S*)\.dbc$`, e.g. `can1-obd.dbc`, `lin1-truck.dbc`. The data lake automation uses the same prefix rule; the CANedge Intro recommends only letters, numbers and dashes in DBC file names |
-| `-i` | Input files/folders (must have a common root); positional paths work too (also drag-and-drop on Windows) |
+| `-i` | Input files/folders (must have a common parent folder); positional paths work too (also drag-and-drop on Windows) |
 | `-O` | Output directory (must exist). `-X`: no `_out` suffix on the output root for folder input |
 | `-p` | Password file for MFE/MFM (default `passwords.json` in the working directory) |
 | `--concat` (default) / `--no-concat` | Merge consecutive output files of one rule directory |
@@ -42,10 +42,10 @@ mdf2parquet_decode [--verbosity=<0-4>] [--non-interactive] [-X] [-b <bytes>] [-p
 | `--pgn-dst-merge` (default) / `--no-pgn-dst-merge` | J1939 PDU1: Merge destination addresses, or split per DA |
 | `--verbosity=<n>` | 0-4, default 2; 4 reports details like DLC mismatches |
 | `--dbdump` | Dump the parsed DBCs as JSON into the working directory (troubleshooting) |
-| `-b` | Buffer size in bytes (0 disables, -1 = whole file) |
 | `-d` | Deletes the input files after conversion - never use it on the user's log files |
 
-The run summary includes transport-protocol counts (succeeded / failed / unfinished).
+The run summary includes transport-protocol counts (succeeded / failed / unfinished). Exit code non-zero if any file
+failed (the others are still decoded); errors on stderr. Missing inputs are an error.
 
 ## 3. DBC support
 

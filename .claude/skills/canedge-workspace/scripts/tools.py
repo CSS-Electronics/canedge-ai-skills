@@ -53,39 +53,39 @@ def frame_weight(n: float) -> float:
 _DOCS = "https://canlogger.csselectronics.com/tools-docs"
 TOOLS = {
     "mdf2csv": {
-        "skill": "canedge-mdf2csv", "env": "CANEDGE_MDF2CSV", "version": "24.12.19",
+        "skill": "canedge-mdf2csv", "env": "CANEDGE_MDF2CSV", "version": "26.11.23",
         "docs": f"{_DOCS}/converters_mf4/converters/csv/index.html",
         "builds": {
-            "win-x64": (f"{_DOCS}/converters_mf4/_downloads/0e12bb83b69f2b331edba7f20567a24b/24.12.19.zip",
-                        "b1e6f49a5480b29c125fa5d9ba007477"),
-            "linux-x64": (f"{_DOCS}/converters_mf4/_downloads/0d130708b7c08d7c37df57d4b79e71be/24.12.19.zip",
-                          "4daf0d79ca1352d700f7e985cf6eacde"),
-            "linux-arm64": (f"{_DOCS}/converters_mf4/_downloads/5b1ff0a035210f42d119a26612ef5f1f/24.12.19.zip",
-                            "e40564b1b4295647249f330a105e50fa"),
+            "win-x64": (f"{_DOCS}/converters_mf4/_downloads/fb5c486487a9c3b951470a6922b8b598/26.11.23.zip",
+                        "831d0161e69e0b69dff812b164f9bab2"),
+            "linux-x64": (f"{_DOCS}/converters_mf4/_downloads/d3345a6dc945ba03d0f6ab1376ce82f7/26.11.23.zip",
+                          "c7efb870abd8748e21b412dd1746b809"),
+            "linux-arm64": (f"{_DOCS}/converters_mf4/_downloads/7676edc60f4e57023579ef6c7edc530b/26.11.23.zip",
+                            "3ae5472423c1eb801386c5cb54d12b63"),
         },
     },
     "mdf2mdf": {
-        "skill": "canedge-mdf2mdf", "env": "CANEDGE_MDF2MDF", "version": "24.12.19",
+        "skill": "canedge-mdf2mdf", "env": "CANEDGE_MDF2MDF", "version": "26.11.23",
         "docs": f"{_DOCS}/converters_mf4/converters/mdf/index.html",
         "builds": {
-            "win-x64": (f"{_DOCS}/converters_mf4/_downloads/3a7742b6576a9c775a5d139f1efe7721/24.12.19.zip",
-                        "4050fe5e68a440c613ab1362bbefb1f7"),
-            "linux-x64": (f"{_DOCS}/converters_mf4/_downloads/03226859ddfba25b3e1763be917b7cd7/24.12.19.zip",
-                          "f50f30690da91e97f2fe0fefba1f81a5"),
-            "linux-arm64": (f"{_DOCS}/converters_mf4/_downloads/343a56a917c3d9538a42d046c2e734ce/24.12.19.zip",
-                            "d8a95b31e5eaaf6ecaaef2d501a4371f"),
+            "win-x64": (f"{_DOCS}/converters_mf4/_downloads/e3ad07c8a878cbc9027cdeb8a55b3047/26.11.23.zip",
+                        "1e07755d66923d9b435ca454c67d432e"),
+            "linux-x64": (f"{_DOCS}/converters_mf4/_downloads/5b8c30646302e88c91340b5bd677e7f6/26.11.23.zip",
+                          "004ba6c8deb905aacc95f7faf453d2a7"),
+            "linux-arm64": (f"{_DOCS}/converters_mf4/_downloads/e778dcbf7cda7c65cabcbeb905907346/26.11.23.zip",
+                            "1486e1c0109aeae732dafc916452e9cc"),
         },
     },
     "mdf2parquet_decode": {
-        "skill": "canedge-mdf2parquet", "env": "CANEDGE_MDF2PARQUET", "version": "25.12.15",
+        "skill": "canedge-mdf2parquet", "env": "CANEDGE_MDF2PARQUET", "version": "26.11.23",
         "docs": f"{_DOCS}/decoders_mf4/decoders/parquet/index.html",
         "builds": {
-            "win-x64": (f"{_DOCS}/decoders_mf4/_downloads/d76103f280ff5c4e6de865e3e7c6d21f/25.12.15.zip",
-                        "d9d4960a9e6af38062ccb826f86c760f"),
-            "linux-x64": (f"{_DOCS}/decoders_mf4/_downloads/f9840eb535b26a0c9a41608e54aae5ff/25.12.15.zip",
-                          "abf5d41645c887386a087b05b2ecf41c"),
-            "linux-arm64": (f"{_DOCS}/decoders_mf4/_downloads/87982ac63c545928967d9d28cdf69482/25.12.15.zip",
-                            "22020f98b01145d735f69a52297562fb"),
+            "win-x64": (f"{_DOCS}/decoders_mf4/_downloads/31c192659ce954a062ffec01a1ab9afe/26.11.23.zip",
+                        "d63c9a89a33bf14d5167acb066af5e95"),
+            "linux-x64": (f"{_DOCS}/decoders_mf4/_downloads/e43b122615ea385e790da966d1983a1c/26.11.23.zip",
+                          "51a674121b9f8712b256edb48ed6b726"),
+            "linux-arm64": (f"{_DOCS}/decoders_mf4/_downloads/a0edb11fb01642baf5fd793749d62630/26.11.23.zip",
+                            "909055c9531990ff92fcea6f46647092"),
         },
     },
 }
@@ -150,20 +150,22 @@ def read_mdf2csv(path: Path, columns: list[str] | None = None):
 
 def mdf2csv_tables(log: Path | str, tool: Path, passwords: str | Path | None = None, tmp_root: str | None = None,
                    columns: list[str] | None = None, muxtp: list | None = None,
-                   mdf2mdf: Path | None = None) -> list[tuple[str, object]]:
+                   mdf2mdf: Path | None = None, error_frames: bool = False) -> list[tuple[str, object]]:
     """Convert one log file (MF4/MFC/MFE/MFM) with mdf2csv into a temp folder and return [(bus, Table)], bus = CAN or
-    LIN (one table per mdf2csv CSV). Each CSV is deleted as soon as it is read (CSV = 3-10x the MF4 size), the temp
+    LIN (one table per mdf2csv CSV). error_frames=True also returns the CAN error frames as bus "CAN_ERR" (mdf2csv
+    --error-frames; columns TimestampEpoch, BusChannel, ErrorType = STUFF / FORM / CRC / BIT / ACK / UNKNOWN; only if
+    the file has any, i.e. error frame logging was enabled in the Configuration File). Each CSV is deleted as soon as it is read (CSV = 3-10x the MF4 size), the temp
     folder always. Raises RuntimeError if mdf2csv produced no CSV. Never passes -d: The log file stays untouched.
 
-    muxtp = MUX-TP mapping (muxtp.py, e.g. [("CAN2", "010", [11, 12, 13, 14])]) and mdf2mdf = its path: The file is
-    first demuxed with mdf2mdf into the temp folder (CANmod.router channels S1-S4 become CAN11-14, ...), then that
-    temporary MF4 is converted. The tunnel frames (CAN2 0x10) are removed by the demux."""
+    muxtp = MUX-TP mapping (muxtp.py, e.g. [{"channel": "CAN2", "id": "010", "channels": [11, 12, 13, 14]}]) and
+    mdf2mdf = its path: The file is first demuxed with mdf2mdf into the temp folder (CANmod.router channels S1-S4
+    become CAN11-14, ...), then that temporary MF4 is converted. The tunnel frames (CAN2 0x10) are removed by the demux."""
     tmp = Path(tempfile.mkdtemp(prefix="mdf2csv-", dir=tmp_root))
     try:
         src = Path(log)
         if muxtp:
             src = demux(src, mdf2mdf, muxtp, tmp / "demux", passwords)
-        cmd = [str(tool), "--non-interactive", "--verbosity=1", "-O", str((tmp / "csv").resolve())]
+        cmd = [str(tool), "--verbosity=1", "-O", str((tmp / "csv").resolve())] + (["--error-frames"] if error_frames else [])
         (tmp / "csv").mkdir()
         if passwords and not muxtp:
             cmd.append(f"--password-file={Path(passwords).resolve()}")
@@ -177,7 +179,8 @@ def mdf2csv_tables(log: Path | str, tool: Path, passwords: str | Path | None = N
             remove_temp(src)
         out = []
         for c in csvs:
-            out.append(("LIN" if c.stem.endswith("_LIN") else "CAN", read_mdf2csv(c, columns)))
+            bus = "CAN_ERR" if c.stem.endswith("_CAN_ERR") else "LIN" if c.stem.endswith("_LIN") else "CAN"
+            out.append((bus, read_mdf2csv(c, None if bus == "CAN_ERR" else columns)))
             remove_temp(c)
         return out
     finally:
@@ -194,7 +197,7 @@ def demux(log: Path | str, mdf2mdf: Path | None, muxtp: list, out_dir: Path | st
         mdf2mdf = resolve("mdf2mdf")
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)  # mdf2mdf fails (exit 129) if -O does not exist
-    cmd = [str(mdf2mdf), "--non-interactive", "--verbosity=1", "-O", str(out_dir.resolve())] + _mx.flags(muxtp)
+    cmd = [str(mdf2mdf), "--verbosity=1", "-O", str(out_dir.resolve())] + _mx.flags(muxtp)
     if passwords:
         cmd.append(f"--password-file={Path(passwords).resolve()}")
     p = subprocess.run(cmd + [str(Path(log).resolve())], capture_output=True, text=True, timeout=3600, cwd=out_dir)
@@ -211,7 +214,7 @@ def finalized_header(log: Path | str, passwords: str | Path | None = None, mdf2m
     """The MF4 header of an MFC/MFE/MFM file (mf4_files.read_header fields): mdf2mdf writes a finalized copy into a
     temp folder (the whole file: MFC carries a file checksum, a truncated copy fails), the header is read, the copy
     deleted. Cost ~0.6 s per MB of MFC (the copy is 2-4x larger). Raises RuntimeError if mdf2mdf fails.
-    Known: mdf2mdf 24.12.19 drops the LIN bit-rates from the header (all other fields are kept)."""
+    Known: mdf2mdf (24.12.19-26.11.23) drops the LIN bit-rates from the header (all other fields are kept)."""
     from mf4_files import read_header
     tmp = Path(tempfile.mkdtemp(prefix="mdf2mdf-hdr-", dir=tmp_root))
     try:

@@ -358,7 +358,7 @@ the chat anyway: Do not repeat them, open the setup window instead, and suggest 
   `finalized`; firmware, config and meta only change with a restart = new session). Raw stats (incl.
   bus load), local decoding (device meta name) and the config simulation (recorded config CRC32) do
   this; plain `mf4_files.py` listings do not (cost ~0.6 s per MB of the finalized file). mdf2mdf
-  24.12.19 drops the LIN bit-rates from the header.
+  (24.12.19-26.11.23) drops the LIN bit-rates from the header.
 - The header start time can be the **session** start rather than the split start; use the first
   frame timestamp for exact split time spans.
 - CANedge2/CANedge3 uploads to S3 carry object metadata incl. the logging time (`Timestamp`).

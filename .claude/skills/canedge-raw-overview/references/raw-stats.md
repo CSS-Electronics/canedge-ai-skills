@@ -22,13 +22,15 @@ All times are UTC ISO strings ending in `Z`. Device = MF4 header serial number (
 | `file.header`, `file.id_source` | `mf4` = header read, `finalized` = MFC/MFE/MFM header from a finalized copy (mdf2mdf) of one file of the session, `unsupported` = not read (`--no-headers`, mdf2mdf failed, or cached before; meta/firmware/CRC32 `null`, no bus load); `id_source` = where device/session/split came from (`header`, or `path` as fallback). Header fields are refreshed on cached stats on every `raw_stats.py` run (no re-conversion) |
 | `file.bitrates` | Non-zero header bit-rates, e.g. `{"CAN1": 500000}`. No CAN FD data-phase rate in the header |
 | `tool.mdf2csv` | Converter version |
-| `time.first_utc`, `last_utc`, `duration_s` | First/last frame of the file (all channels). The header start time can be the session start, so it is not used |
+| `time.first_utc`, `last_utc`, `duration_s` | First/last frame of the file (all channels, data + error frames). The header start time can be the session start, so it is not used |
 | `frames_total` | Data frames, all channels |
+| `error_frames_total` | CAN error frames, all channels (mdf2csv `--error-frames`; 0 if none or not recorded). Cached stats without it are recomputed |
 | `bin_s` | 60. Bins are aligned to whole UTC minutes (`bins.start_utc` = first frame floored to the minute) |
 | `channels.<CANx/LINx>.frames`, `unique_ids` | Totals per channel. `CAN9` = internal GNSS/IMU, treated like any other channel |
-| `channels.*.error_frames` | Always `null`: mdf2csv 24.12.19 does not export error frames |
+| `channels.*.error_frames`, `error_types` | CAN error frames of the channel and per type (`STUFF`, `FORM`, `CRC`, `BIT`, `ACK`, `UNKNOWN`; `error_types` only if > 0). A channel with only error frames has `frames` 0 |
 | `channels.*.tx_frames` | Frames transmitted by the logger (`Dir` = 1), only if > 0 |
 | `channels.*.busload_mean_pct`, `busload_max_pct` | Only if the header has a bit-rate for the channel (CAN only). Max over the same bins as the mean (coverage floored at 1 s) |
+| `channels.*.bins.errors` | `{type: [error frames per 60 s bin]}`, only types with errors |
 | `channels.*.bins.frames`, `bins.busload_pct` | Per 60 s bin. Bus load of a partial edge bin is relative to its covered seconds. Omitted (with a `warnings` entry) if the file spans > 100k bins (bad timestamps) |
 | `ids[]` | One entry per channel + ID, sorted by `est_storage_bytes` |
 | `ids[].id`, `ide`, `fd` | `0x` + upper-case hex, 4 digits (11-bit) or 8 digits (29-bit); LIN IDs 2 digits (cache format; `stats.json` and the dashboard show 11-bit IDs with 3 digits, as all skills do). `fd` = any frame with EDL |
@@ -60,8 +62,9 @@ unique IDs), `devices`, `comparison` (only with > 1 device). All times UTC; repo
 | `states` | `fps_active_mean` (all buses, frames / active time), `fps_max` (busiest minute, all channels), `states.silent` / `states.active` (`h`, `pct` of recorded time; active also `fps_median`) |
 | `states.trips` | Trip summary over all trips: `count`, `total_h`, `median_min`, `longest_min`, `days_with_data` (UTC days with recording), `per_day` (trips per day with data), `last_start_utc` |
 | `states.segments`, `segments_total` | The **trips** shown in the report (active = frames on any channel, except those in `settings.activity_ignore`, e.g. CAN9): Active periods, joined across interruptions (silent or no data) <= `--segment-merge-min` (5), at least `--trip-min-min` (3) min long: `{start_utc, end_utc, minutes, fps_mean, files[] (`<device>/<session>/<split>.<ext>`, max 10), files_more}` - max 200 listed |
-| `channels.<ch>` | `bitrates`, `frames`, `tx_frames`, `unique_ids`, `fps_active_mean` (frames / bus-active time), `fps_max` (busiest minute: frames / recorded seconds of that minute, min 1 s - the same minutes as the averages), plus the estimates `busload_mean_pct` (duration-weighted) and `busload_max_pct` (not shown in the report) |
-| `fps_timeline` | Recorded-time timeline for charts: `t_utc[]` (point start), `fps.<ch>[]` (average per point), `fps_peak.<ch>[]` (busiest minute per point), `minutes_per_point`, `break_before[]` (point indexes preceded by a period without data). Periods without data are removed from the axis |
+| `errors` | CAN error frames: `frames` (0 = none recorded), `pct_of_frames`, `by_type`, `first_utc`/`last_utc`, `minutes_with_errors`, `busiest_minute`, `periods_total`, `periods[]` = minutes with errors joined across gaps <= `--segment-merge-min` (like trips): `{start_utc, end_utc, minutes, error_frames, max_per_min, channels, types, in_trip (overlaps a trip), files[], files_more}` - max 200 listed |
+| `channels.<ch>` | `bitrates`, `frames`, `tx_frames`, `unique_ids`, `error_frames` (+ `error_pct` = share of data + error frames, `error_types`, if > 0), `fps_active_mean` (frames / bus-active time), `fps_max` (busiest minute: frames / recorded seconds of that minute, min 1 s - the same minutes as the averages), plus the estimates `busload_mean_pct` (duration-weighted) and `busload_max_pct` (not shown in the report) |
+| `fps_timeline` | Recorded-time timeline for charts: `t_utc[]` (point start), `fps.<ch>[]` (average per point), `fps_peak.<ch>[]` (busiest minute per point), `minutes_per_point`, `break_before[]` (point indexes preceded by a period without data), `error_frames.<ch>[]` (sum per point, channels with errors only). Periods without data are removed from the axis |
 | `ids.total`, `ids.listed`, `ids.omitted` | All IDs are counted; only the top `--top` (30) by storage are listed, the rest is summarized |
 | `ids.top[]` | `channel`, `id`, `frames`, `rate_hz` (frames / device bus-active time), `period_ms_median`/`p95` (frames-weighted median of the per-file values), `dlc`, `unique_payloads` (max per file), `payload_changes_pct` (all files), `est_storage_bytes`, `est_storage_pct` (share of the device total), `first_utc`, `last_utc`, `files`, `files_pct`, `sessions`, optional `fd`, `unique_payloads_capped` |
 | `static_candidates[]` | Up to 20 static IDs (`payload_changes_pct` < 5), by storage share |
@@ -87,6 +90,7 @@ additive (sum) or max-able, so the app can filter by device + time and recompute
 | `files` | One row per log file: `dev`, `first`, `last` (frames), `size`, `session`, `split`, `ext` (MF4/MFC/MFE/MFM), `fw`, `crc`, `meta`, `hdr` (1 = header readable). The app shows them as `<device>/<session>/<split>.<ext>` in hover tooltips and the trips table |
 | `ids` | Per device x grain x channel x ID: `fr` (frames), `est` (est. storage bytes), `up` (max unique payloads), `cap` (capped), `per` (frames-weighted median period ms), `nf` (files containing it) |
 | `id_dlc` | `"<device>|<channel>|<id>"` -> distinct DLCs |
+| `errors`, `error_types` | Sparse rows (only > 0) per device x bucket x channel x type: `dev`, `t`, `ch`, `ty` (index into `error_types`), `n` (CAN error frames). The Errors tab joins buckets with errors into error periods (gaps <= `segment_merge_min`) |
 
 Filter semantics in the app: Buckets and ID rows are included when their start lies in the range; trips and files when
 they overlap it. Medians are not additive, so the dashboard shows means and maxima per selection (per-state medians

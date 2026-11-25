@@ -17,7 +17,7 @@ parsers for raw frames.
 
 | Platform | Location |
 |---|---|
-| Windows x64, Linux x64 / ARM64 | `.claude/skills/canedge-mdf2csv/bin/mdf2csv[.exe]` (24.12.19), downloaded by `install.bat` / `install.sh` (`canedge-workspace/scripts/install_tools.py`) |
+| Windows x64, Linux x64 / ARM64 | `.claude/skills/canedge-mdf2csv/bin/mdf2csv[.exe]` (26.11.23), downloaded by `install.bat` / `install.sh` (`canedge-workspace/scripts/install_tools.py`) |
 | macOS / other | No build: Use a Linux VM/container, or set `CANEDGE_MDF2CSV=<path>` / `--tool` |
 
 The docs page also has separate downloads of the converters to ASC (Vector) and TRC (PEAK). The converter to MF4
@@ -32,19 +32,19 @@ channels S1-S4 then show as `BusChannel` 11-14 (15-18 for a second router). `csv
 ## Usage
 
 ```
-mdf2csv.exe --non-interactive -O <out-folder> <file.MF4>            one file
-mdf2csv.exe --non-interactive -O <out-folder> -i <folder>           all log files below a folder
-mdf2csv.exe --non-interactive -O <out-folder> -p passwords.json <file.MFE>   encrypted files
+mdf2csv.exe -O <out-folder> <file.MF4>                      one file
+mdf2csv.exe -O <out-folder> -i <folder>                     all log files below a folder
+mdf2csv.exe -O <out-folder> -p passwords.json <file.MFE>    encrypted files
 ```
 
 | Option | Meaning |
 |---|---|
-| `-O, --output-directory` | Output folder. Always set it (the project's `temp/`, or `TEMP/` without a project), so nothing is written next to the user's log files |
-| `-i, --input-files` | Input files/folders (must have a common root); positional paths work too |
+| `-O, --output-directory` | Output folder (must exist). Always set it (the project's `temp/`, or `TEMP/` without a project), so nothing is written next to the user's log files |
+| `-i` | Input files/folders (must have a common parent folder); positional paths work too |
 | `-p, --password-file` | Passwords for encrypted files (default: `passwords.json` in the working directory) |
 | `-X, --no-append-root` | Folder input: No extra `<folder>_out` level in the output |
-| `-b, --buffer` | Buffer size in bytes (0 disables, -1 = whole file) |
-| `--non-interactive`, `--verbosity=<0-4>` | No progress output (use in scripts) / log level |
+| `--error-frames` | Also write CAN error frames to `<split>_CAN_ERR.csv` (only if the file has any) |
+| `--verbosity=<0-4>` | Log level on stderr (default 2 = errors) |
 | `-v, --version` | Tool version (state it when reporting results) |
 | `-d, --delete-converted` | **Never use**: Deletes the input log files after conversion |
 
@@ -64,7 +64,10 @@ mdf2csv.exe --non-interactive -O <out-folder> -p passwords.json <file.MFE>   enc
   `ThreadPoolExecutor`, at most 4; works the same on Windows and Linux, no GNU parallel needed), each with its own
   `-O <out>/<DEVICE>` (with `-X` the outputs of several devices would collide). Measured: 3 devices 49 s -> 12 s.
   Raw statistics across many files: `canedge-raw-overview` `raw_stats.py` (already parallel)
-- Separator `;`, one row per frame, sorted by time. Data frames only (no error frames)
+- Separator `;`, one row per frame, sorted by time (all channels mixed). Data frames only; with `--error-frames`
+  also `<split>_CAN_ERR.csv` (`TimestampEpoch;BusChannel;ErrorType`, e.g. `CRC`)
+- Exit code non-zero if any file failed (the others are still converted); errors on stderr. Missing inputs are an
+  error
 
 | Column | CAN | LIN | Meaning |
 |---|---|---|---|

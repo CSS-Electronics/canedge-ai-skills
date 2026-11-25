@@ -169,7 +169,7 @@ def save_manifest(lake: Path, man: dict) -> None:
 def run_decoder(tool: Path, paths: list[str], mapping: dict, lake: Path, password_file: Path | None) -> tuple[int, str]:
     """Decode files (all in one folder) straight into the lake (existing outputs are overwritten). The decoder runs
     in an empty cwd so it never picks up stray DBC/passwords files. Returns (returncode, error lines or output tail)."""
-    cmd = [str(tool), "--non-interactive", "--verbosity=2", "-X", "--no-concat", "-O", str(lake.resolve())]
+    cmd = [str(tool), "--verbosity=2", "-X", "--no-concat", "-O", str(lake.resolve())]
     if password_file:
         cmd.append(f"--password-file={password_file.resolve()}")
     cmd += [f"--dbc-{ch.lower()}={p.resolve()}" for ch, ps in sorted(mapping.items()) for p in ps]

@@ -22,7 +22,7 @@ Text fields support `**bold**` and `` `code` `` only. Figure paths are relative 
     "sources": ["D:/LOG/12345678/00000001/00000001.MF4"],
     "files": 1,
     "dbc_files": {"12345678": ["can1-vehicle.dbc"]},
-    "tools": {"mdf2parquet_decode": "25.12.15"},
+    "tools": {"mdf2parquet_decode": "26.11.23"},
     "extra": {"Project": "projects/2026-01-15-charging-fault"}
   },
   "sections": [

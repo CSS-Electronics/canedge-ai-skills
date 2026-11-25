@@ -8,6 +8,7 @@ numbers. All times are UTC epoch seconds. Tables are columnar (one list per colu
   trips    one row per trip (all trips, not only the longest); its log files = the files overlapping it
   files    one row per log file: device, first/last frame, size, meta name, header readable, session/split/extension (<device>/<session>/<split>.<ext>), firmware, config CRC32
   ids      device x day (week / 30 days for large fleets) x channel x ID: frames, est. storage bytes, max unique payloads, period, files containing it
+  errors   device x time bucket x channel x error type: CAN error frames (sparse: only rows with errors)
 
 Minute states: Silent (recording, no frames on any bus) or active. Averages use active time only.
 """
@@ -53,6 +54,8 @@ def build_facts(stats: list[dict], o: argparse.Namespace) -> dict:
     meta = {}
     ids_acc: dict[tuple, dict] = {}
     id_dlc: dict[str, set] = defaultdict(set)
+    errors = {"dev": [], "t": [], "ch": [], "ty": [], "n": []}  # sparse; ty = index into error_types
+    error_types = sorted({t for m in models.values() for e in m["er"].values() for t in e})
 
     for di, dev in enumerate(devices):
         m = models[dev]
@@ -105,6 +108,15 @@ def build_facts(stats: list[dict], o: argparse.Namespace) -> dict:
             pkc = np.zeros(n)
             np.maximum.at(pkc, inv, m["per_min"](f))
             fr[ch]["pk"] += np.round(pkc).astype(int).tolist()
+        for ch, per_type in sorted(m["er"].items(), key=lambda kv: ch_key(kv[0])):
+            for typ, a in sorted(per_type.items()):
+                cnt = np.round(add(a)).astype(int)
+                for j in np.nonzero(cnt)[0].tolist():
+                    errors["dev"].append(di)
+                    errors["t"].append(int(keys[j]))
+                    errors["ch"].append(channels.index(ch))
+                    errors["ty"].append(error_types.index(typ))
+                    errors["n"].append(int(cnt[j]))
 
         for g in m["segments"]:
             trips["dev"].append(di)
@@ -182,12 +194,14 @@ def build_facts(stats: list[dict], o: argparse.Namespace) -> dict:
             "devices": devices, "channels": channels,
             "id_names": id_names, "meta_names": meta_names, "id_dlc": {k: ",".join(map(str, sorted(v))) for k, v in id_dlc.items()},
             "segment_merge_min": o.segment_merge_min, "trip_min_min": o.trip_min_min, "meta": meta,
-            "buckets": {**bk, "fr": fr}, "trips": trips, "files": files, "ids": ids}
+            "buckets": {**bk, "fr": fr}, "trips": trips, "files": files, "ids": ids,
+            "error_types": error_types, "errors": errors}
 
 
 def facts_summary(f: dict) -> str:
     return (f"facts: {len(f['devices'])} devices, {len(f['buckets']['t']):,} buckets of {f['bucket_s'] // 60} min, "
-            f"{len(f['trips']['start']):,} trips, {len(f['files']['first']):,} files, {len(f['ids']['fr']):,} ID rows")
+            f"{len(f['trips']['start']):,} trips, {len(f['files']['first']):,} files, {len(f['ids']['fr']):,} ID rows, "
+            f"{len(f['errors']['n']):,} error rows")
 
 
 __all__ = ["build_facts", "facts_summary", "rnd"]
